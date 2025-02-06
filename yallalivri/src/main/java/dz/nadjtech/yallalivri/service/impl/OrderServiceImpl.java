@@ -11,6 +11,10 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Objects;
+
 @Service
 public class OrderServiceImpl implements OrderService {
 
@@ -71,15 +75,13 @@ public class OrderServiceImpl implements OrderService {
                 }).map(OrderMapper::toDTO);
     }
 
+
     private boolean isValidTransition(OrderStatus oldStatus, OrderStatus newStatus) {
         return switch (oldStatus) {
             case CREATED ->
                 // From CREATED, only allow ASSIGNED or CANCELLED
                     newStatus == OrderStatus.ASSIGNED || newStatus == OrderStatus.CANCELLED;
             case ASSIGNED  ->
-                // From SHIPPING, only allow SHIPPED or CANCELLED
-                    newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.CANCELLED;
-            case SHIPPED ->
                 // From SHIPPED, only allow RETURNED or DELIVERED
                     newStatus == OrderStatus.RETURNED || newStatus == OrderStatus.DELIVERED;
             default -> false;
@@ -93,11 +95,50 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Flux<OrderDTO> getAllOrderByCourierId(Long courierId) {
-        return this.orderRepository.findAll().filter(order -> order.getCourierId().equals(courierId)).map(OrderMapper::toDTO);
+        return orderRepository.findByCourierIdOrderByUpdatedAtDesc(courierId)
+                .map(OrderMapper::toDTO);
     }
 
     @Override
     public Flux<OrderDTO> getAllOrderByStoreId(Long storeId) {
-        return this.orderRepository.findAll().filter(order -> order.getStoreId().equals(storeId)).map(OrderMapper::toDTO);
+        return orderRepository.findByStoreIdOrderByUpdatedAtDesc(storeId)
+                .map(OrderMapper::toDTO);
     }
+
+    @Override
+    public Flux<OrderDTO> getOrdersByStatusSince(String status, LocalDateTime since) {
+        return orderRepository.findByStatusAndCreatedAtAfter(status, since).map(OrderMapper::toDTO);
+    }
+
+    @Override
+    public Mono<OrderDTO> assignOrderToCourier(Long id, Map<String, Object> updates) {
+        return orderRepository.findById(id)
+                .flatMap(order -> {
+                    if (order.getCourierId() != null) {
+                        return Mono.error(new IllegalStateException("Commande déjà assignée à un autre livreur"));
+                    }
+
+                    if (updates.containsKey("courierId")) {
+                        order.setCourierId(Long.valueOf(updates.get("courierId").toString()));
+                    }
+                    if (updates.containsKey("status")) {
+                        order.setStatus(OrderStatus.valueOf(updates.get("status").toString()));
+                    }
+                    return orderRepository.save(order);
+                })
+                .map(OrderMapper::toDTO);
+    }
+
+
+    @Override
+    public Flux<OrderDTO> getOrdersByCourierAndStatus(Long courierId, OrderStatus orderStatus) {
+        return this.orderRepository.findByCourierIdAndStatus(courierId, orderStatus).map(OrderMapper::toDTO);
+    }
+
+    @Override
+    public Flux<OrderDTO> getRecentOrdersByStoreId(Long storeId, LocalDateTime since) {
+        return orderRepository.findByStoreIdAndCreatedAtAfter(storeId, since)
+                .map(OrderMapper::toDTO);
+    }
+
 }
