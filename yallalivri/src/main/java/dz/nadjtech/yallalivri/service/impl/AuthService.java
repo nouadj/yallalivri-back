@@ -26,7 +26,7 @@ public class AuthService {
                 .flatMap(user -> {
                     if (passwordEncoder.matches(authRequest.getPassword().trim(), user.getPassword().trim())) {
                         String token = JwtUtil.generateToken(user);
-                        return Mono.just(new AuthResponse(token));
+                        return Mono.just(new AuthResponse(token, user.getId()));
                     } else {
                         return Mono.error(new RuntimeException("Identifiants incorrects"));
                     }

@@ -1,18 +1,19 @@
 package dz.nadjtech.yallalivri.entity;
 
-import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
-import java.time.LocalDateTime;
+
+import java.time.LocalDate;
 
 @Table("couriers")
 public class Courier extends User {
-    LocalDateTime dateOfBirth;
 
-    public LocalDateTime getDateOfBirth() {
+    LocalDate dateOfBirth;
+
+    public LocalDate getDateOfBirth() {
         return dateOfBirth;
     }
 
-    public void setDateOfBirth(LocalDateTime dateOfBirth) {
+    public void setDateOfBirth(LocalDate dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
     }
 }

@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -48,4 +50,5 @@ public class UserController {
         return userService.deleteUser(id)
                 .thenReturn(ResponseEntity.noContent().build());
     }
+
 }

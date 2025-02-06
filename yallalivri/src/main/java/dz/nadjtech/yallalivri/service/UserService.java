@@ -13,4 +13,6 @@ public interface UserService {
     Mono<Void> deleteUser(Long id);
     Mono<UserDTO> findByEmail(String email);
     Mono<UserWithPasswordDTO> findByEmailWithPassword(String email);
+
+    Mono<UserDTO> updateNotificationToken(Long id, String token);
 }

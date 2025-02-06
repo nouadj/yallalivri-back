@@ -16,7 +16,7 @@ import reactor.core.publisher.Mono;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
-    @Bean
+ /*   @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
@@ -39,14 +39,13 @@ public class SecurityConfig {
     }
 
 
-    /*
+    */
         @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/auth/login").permitAll()
-                        .pathMatchers("/api/**").permitAll()
+                        .pathMatchers("/**").permitAll()
                         .pathMatchers("/auth/me").authenticated()
                         .anyExchange().authenticated()
                 )
@@ -61,7 +60,7 @@ public class SecurityConfig {
                 )
                 .build();
     }
-     */
+
     private ReactiveJwtAuthenticationConverter reactiveJwtAuthenticationConverter() {
         ReactiveJwtAuthenticationConverter converter = new ReactiveJwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {

@@ -1,6 +1,7 @@
 package dz.nadjtech.yallalivri.controller;
 
 import dz.nadjtech.yallalivri.dto.OrderDTO;
+import dz.nadjtech.yallalivri.dto.OrderDisplayDTO;
 import dz.nadjtech.yallalivri.dto.OrderStatus;
 import dz.nadjtech.yallalivri.service.OrderService;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +23,7 @@ public class OrderController {
     }
 
     @GetMapping("/status/{status}")
-    public Flux<OrderDTO> getOrdersByStatus(
+    public Flux<OrderDisplayDTO> getOrdersByStatus(
             @PathVariable String status,
             @RequestParam(required = false, defaultValue = "5") int hours) { // ✅ 5 heures max
         LocalDateTime since = LocalDateTime.now().minus(hours, ChronoUnit.HOURS);
@@ -33,8 +34,8 @@ public class OrderController {
 
 
     @GetMapping("/courier/{courierId}")
-    public Flux<OrderDTO> getAllOrdersForCourier(@PathVariable Long courierId,
-                                                 @RequestParam(required = false) String status) {
+    public Flux<OrderDisplayDTO> getAllOrdersForCourier(@PathVariable Long courierId,
+                                                        @RequestParam(required = false) String status) {
         if ("ASSIGNED".equalsIgnoreCase(status)) {
             return orderService.getOrdersByCourierAndStatus(courierId, OrderStatus.ASSIGNED);
         }
@@ -43,7 +44,7 @@ public class OrderController {
 
 
     @GetMapping("/store/{storeId}")
-    public Flux<OrderDTO> getAllOrdersForStore(@PathVariable Long storeId,
+    public Flux<OrderDisplayDTO> getAllOrdersForStore(@PathVariable Long storeId,
                                                @RequestParam(required = false) Integer hours) {
         if (hours != null) {
             LocalDateTime since = LocalDateTime.now().minusHours(hours);

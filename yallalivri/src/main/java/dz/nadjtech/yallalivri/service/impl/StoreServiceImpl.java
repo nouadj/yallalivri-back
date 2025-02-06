@@ -2,8 +2,10 @@ package dz.nadjtech.yallalivri.service.impl;
 
 import dz.nadjtech.yallalivri.dto.StoreDTO;
 import dz.nadjtech.yallalivri.entity.Store;
+import dz.nadjtech.yallalivri.entity.User;
 import dz.nadjtech.yallalivri.mapper.StoreMapper;
 import dz.nadjtech.yallalivri.repository.StoreRepository;
+import dz.nadjtech.yallalivri.repository.UserRepository;
 import dz.nadjtech.yallalivri.service.StoreService;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -13,11 +15,13 @@ import reactor.core.publisher.Mono;
 public class StoreServiceImpl implements StoreService {
 
     private final StoreRepository storeRepository;
+    private final UserRepository userRepository;
     private final StoreMapper storeMapper;
 
-    public StoreServiceImpl(StoreRepository storeRepository, StoreMapper storeMapper) {
+    public StoreServiceImpl(StoreRepository storeRepository, StoreMapper storeMapper, UserRepository userRepository) {
         this.storeRepository = storeRepository;
         this.storeMapper = storeMapper;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -28,9 +32,19 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public Mono<StoreDTO> getStoreById(Long id) {
-        return storeRepository.findById(id)
+        return Mono.zip(
+                        storeRepository.findById(id),
+                        userRepository.findById(id)
+                )
+                .map(tuple -> {
+                    Store store = tuple.getT1();
+                    User user = tuple.getT2();
+                    store.setName(user.getName());
+                    return store;
+                })
                 .map(storeMapper::toDTO);
     }
+
 
     @Override
     public Mono<StoreDTO> createStore(StoreDTO storeDTO) {

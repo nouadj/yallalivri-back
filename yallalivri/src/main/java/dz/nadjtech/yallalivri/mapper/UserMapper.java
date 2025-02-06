@@ -21,6 +21,7 @@ public class UserMapper {
         dto.setPhone(user.getPhone());
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUpdatedAt(user.getUpdatedAt());
+        dto.setNotificationToken(user.getNotificationToken());
 
         return dto;
     }
@@ -59,4 +60,5 @@ public class UserMapper {
 
         return user;
     }
+
 }

@@ -20,7 +20,7 @@ public class CourierMapper {
         dto.setPhone(courier.getPhone());
         dto.setCreatedAt(courier.getCreatedAt());
         dto.setUpdatedAt(courier.getUpdatedAt());
-        dto.setDateOfBirth(courier.getDateOfBirth());
+       // dto.setDateOfBirth(courier.getDateOfBirth());
 
         return dto;
     }
@@ -38,7 +38,7 @@ public class CourierMapper {
         courier.setPhone(dto.getPhone());
         courier.setCreatedAt(dto.getCreatedAt());
         courier.setUpdatedAt(dto.getUpdatedAt());
-        courier.setDateOfBirth(dto.getDateOfBirth());
+        //courier.setDateOfBirth(dto.getDateOfBirth());
 
         return courier;
     }

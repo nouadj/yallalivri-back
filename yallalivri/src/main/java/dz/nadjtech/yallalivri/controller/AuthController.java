@@ -11,6 +11,8 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
@@ -33,5 +35,13 @@ public class AuthController {
     public Mono<UserDTO> getCurrentUser(@AuthenticationPrincipal Jwt jwt)  {
         String email = jwt.getClaim("email");
         return userService.findByEmail(email);
+    }
+
+    @PatchMapping("/users/{id}/notification-token")
+    public Mono<UserDTO> updateNotificationToken(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        String token = request.get("notificationToken");
+        return userService.updateNotificationToken(id, token);
     }
 }

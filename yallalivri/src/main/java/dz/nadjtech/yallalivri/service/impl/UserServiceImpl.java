@@ -82,4 +82,14 @@ public class UserServiceImpl implements UserService {
     public Mono<UserWithPasswordDTO> findByEmailWithPassword(String email) {
         return userRepository.findByEmail(email).map(userMapper::toWithPasswordDTO);
     }
+
+    @Override
+    public Mono<UserDTO> updateNotificationToken(Long userId, String token) {
+        return userRepository.findById(userId)
+                .flatMap(user -> {
+                    user.setNotificationToken(token);
+                    return userRepository.save(user);
+                })
+                .map(userMapper::toDTO);
+    }
 }

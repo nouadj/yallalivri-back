@@ -1,4 +1,4 @@
-package dz.nadjtech.yallalivri.conf;
+package dz.nadjtech.yallalivri.config;
 
 
 import org.springdoc.core.GroupedOpenApi;

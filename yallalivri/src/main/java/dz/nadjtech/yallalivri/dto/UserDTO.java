@@ -11,6 +11,7 @@ public class UserDTO {
     private String email;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String notificationToken;
 
     public Long getId() {
         return id;
@@ -74,5 +75,13 @@ public class UserDTO {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getNotificationToken() {
+        return notificationToken;
+    }
+
+    public void setNotificationToken(String notificationToken) {
+        this.notificationToken = notificationToken;
     }
 }
