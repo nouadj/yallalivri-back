@@ -16,7 +16,7 @@ import java.util.function.Function;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET_STRING = "ChoseBienPlusLongueEtSecuriseeDe32+Car";
+    private static final String SECRET_STRING = "e6e5faac3cbed9751edc53d25413986752ab9322ce71096f3a71b575794e114d";
     private static final Key SECRET_KEY = new SecretKeySpec(
             SECRET_STRING.getBytes(StandardCharsets.UTF_8),
             SignatureAlgorithm.HS256.getJcaName()

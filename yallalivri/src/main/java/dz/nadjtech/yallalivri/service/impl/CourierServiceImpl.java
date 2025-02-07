@@ -41,6 +41,7 @@ public class CourierServiceImpl implements CourierService {
                     Courier courier = tuple.getT1();
                     User user = tuple.getT2();
                     courier.setName(user.getName());
+                    courier.setPhone(user.getPhone());
                     return courier;
                 })
                 .map(courierMapper::toDTO);

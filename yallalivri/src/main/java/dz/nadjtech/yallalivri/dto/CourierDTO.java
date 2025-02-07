@@ -1,7 +1,14 @@
 package dz.nadjtech.yallalivri.dto;
 
-import java.time.LocalDate;
 
 public class CourierDTO extends UserDTO {
+    private Integer age;
 
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
+    }
 }

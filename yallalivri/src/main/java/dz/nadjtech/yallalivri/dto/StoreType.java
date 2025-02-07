@@ -1,4 +1,15 @@
 package dz.nadjtech.yallalivri.dto;
 
-public class StoreType {
+
+public enum StoreType {
+    RESTAURANT,
+    GROCERY,
+    BAKERY,
+    PHARMACY,
+    CLOTHING,
+    ELECTRONICS,
+    FURNITURE,
+    BEAUTY,
+    OTHER;
+
 }

@@ -40,6 +40,7 @@ public class StoreServiceImpl implements StoreService {
                     Store store = tuple.getT1();
                     User user = tuple.getT2();
                     store.setName(user.getName());
+                    store.setPhone(user.getPhone());
                     return store;
                 })
                 .map(storeMapper::toDTO);

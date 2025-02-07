@@ -21,6 +21,7 @@ public class StoreMapper {
         dto.setCreatedAt(store.getCreatedAt());
         dto.setUpdatedAt(store.getUpdatedAt());
         dto.setAddress(store.getAddress());
+        dto.setType(store.getType());
 
         return dto;
     }

@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 public class UserDTO {
     private Long id;
     private String name;
-    private String address;
     private UserRole role;
     private String phone;
     private String email;
@@ -27,14 +26,6 @@ public class UserDTO {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
     }
 
     public UserRole getRole() {
