@@ -8,6 +8,7 @@ import dz.nadjtech.yallalivri.repository.UserRepository;
 import dz.nadjtech.yallalivri.service.CourierService;
 import dz.nadjtech.yallalivri.service.OrderService;
 import dz.nadjtech.yallalivri.service.StoreService;
+import org.springframework.data.geo.Point;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -54,10 +55,35 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void notifyCouriers(OrderDTO order) {
+        if (order.getStoreLatitude() == null || order.getStoreLongitude() == null) {
+            return; // Évite une erreur si la position n'est pas renseignée
+        }
+
+        Point storeLocation = new Point(order.getStoreLatitude(), order.getStoreLongitude());
+        double maxDistanceKm = 20.0; // Rayon de recherche (20 km)
+
         userRepository.findAllByRole(UserRole.COURIER)
-                .filter(user -> user.getNotificationToken() != null)
+                .filter(user -> user.getNotificationToken() != null && user.getLatitude() != null && user.getLongitude() != null)
+                .filter(courier -> {
+                    Point courierLocation = new Point(courier.getLatitude(), courier.getLongitude());
+                    double distance = calculateDistance(storeLocation, courierLocation);
+                    return distance <= maxDistanceKm; // Filtre les livreurs proches
+                })
                 .doOnNext(courier -> sendPushNotification(courier.getNotificationToken(), order))
                 .subscribe();
+    }
+
+    private double calculateDistance(Point p1, Point p2) {
+        double earthRadius = 6371.0; // Rayon de la Terre en km
+        double latDiff = Math.toRadians(p2.getX() - p1.getX());
+        double lonDiff = Math.toRadians(p2.getY() - p1.getY());
+
+        double a = Math.sin(latDiff / 2) * Math.sin(latDiff / 2)
+                + Math.cos(Math.toRadians(p1.getX())) * Math.cos(Math.toRadians(p2.getX()))
+                * Math.sin(lonDiff / 2) * Math.sin(lonDiff / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadius * c;
     }
 
     private void sendPushNotification(String expoToken, OrderDTO order) {
@@ -87,7 +113,7 @@ public class OrderServiceImpl implements OrderService {
                     existingOrder.setCustomerPhone(orderDTO.getCustomerPhone());
                     existingOrder.setCustomerAddress(orderDTO.getCustomerAddress());
                     existingOrder.setStatus(orderDTO.getStatus());
-                    existingOrder.setTotalAmount(orderDTO.getTotalAmount());
+                    existingOrder.setAmount(orderDTO.getAmount());
                     existingOrder.setUpdatedAt(LocalDateTime.now());
                     return orderRepository.save(existingOrder);
                 })

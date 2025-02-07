@@ -45,6 +45,20 @@ public class UserController {
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
+    @PatchMapping("/{id}")
+    public Mono<ResponseEntity<Object>> patchUser(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
+        return userService.patchUser(id, updates)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+    @PatchMapping("/{id}/password")
+    public Mono<Void> patchUserPassword(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
+        return userService.patchUserPassword(id, updates);
+    }
+
+
+
     @DeleteMapping("/{id}")
     public Mono<ResponseEntity<Void>> deleteUser(@PathVariable Long id) {
         return userService.deleteUser(id)

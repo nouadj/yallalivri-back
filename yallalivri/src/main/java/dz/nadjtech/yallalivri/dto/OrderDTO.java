@@ -10,9 +10,13 @@ public class OrderDTO {
     private String customerPhone;
     private String customerAddress;
     private OrderStatus status;
-    private Double totalAmount;
+    private Double amount;
+    private Double deliveryFee;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Double storeLatitude;
+    private Double storeLongitude;
+
 
     public Long getId() {
         return id;
@@ -70,12 +74,20 @@ public class OrderDTO {
         this.status = status;
     }
 
-    public Double getTotalAmount() {
-        return totalAmount;
+    public Double getAmount() {
+        return amount;
     }
 
-    public void setTotalAmount(Double totalAmount) {
-        this.totalAmount = totalAmount;
+    public void setAmount(Double amount) {
+        this.amount = amount;
+    }
+
+    public Double getDeliveryFee() {
+        return deliveryFee;
+    }
+
+    public void setDeliveryFee(Double deliveryFee) {
+        this.deliveryFee = deliveryFee;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -92,5 +104,21 @@ public class OrderDTO {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Double getStoreLatitude() {
+        return storeLatitude;
+    }
+
+    public void setStoreLatitude(Double storeLatitude) {
+        this.storeLatitude = storeLatitude;
+    }
+
+    public Double getStoreLongitude() {
+        return storeLongitude;
+    }
+
+    public void setStoreLongitude(Double storeLongitude) {
+        this.storeLongitude = storeLongitude;
     }
 }

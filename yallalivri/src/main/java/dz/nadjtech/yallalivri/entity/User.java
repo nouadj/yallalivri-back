@@ -19,6 +19,8 @@ public class User {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String notificationToken;
+    private Double latitude;
+    private Double longitude;
 
     public Long getId() {
         return id;
@@ -90,5 +92,21 @@ public class User {
 
     public void setNotificationToken(String notificationToken) {
         this.notificationToken = notificationToken;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
     }
 }

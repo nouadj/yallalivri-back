@@ -22,6 +22,8 @@ public class UserMapper {
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUpdatedAt(user.getUpdatedAt());
         dto.setNotificationToken(user.getNotificationToken());
+        dto.setLatitude(user.getLatitude());
+        dto.setLongitude(user.getLongitude());
 
         return dto;
     }

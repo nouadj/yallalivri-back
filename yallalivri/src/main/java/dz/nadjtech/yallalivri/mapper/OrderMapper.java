@@ -19,7 +19,8 @@ public class OrderMapper {
         dto.setCustomerPhone(order.getCustomerPhone());
         dto.setCustomerAddress(order.getCustomerAddress());
         dto.setStatus(order.getStatus());
-        dto.setTotalAmount(order.getTotalAmount());
+        dto.setAmount(order.getAmount());
+        dto.setDeliveryFee(order.getDeliveryFee());
         dto.setCreatedAt(order.getCreatedAt());
         dto.setUpdatedAt(order.getUpdatedAt());
 
@@ -38,7 +39,8 @@ public class OrderMapper {
         dto.setCustomerPhone(order.getCustomerPhone());
         dto.setCustomerAddress(order.getCustomerAddress());
         dto.setStatus(order.getStatus());
-        dto.setTotalAmount(order.getTotalAmount());
+        dto.setAmount(order.getAmount());
+        dto.setDeliveryFee(order.getDeliveryFee());
         dto.setCreatedAt(order.getCreatedAt());
         dto.setUpdatedAt(order.getUpdatedAt());
 
@@ -61,7 +63,8 @@ public class OrderMapper {
         order.setCustomerPhone(dto.getCustomerPhone());
         order.setCustomerAddress(dto.getCustomerAddress());
         order.setStatus(dto.getStatus());
-        order.setTotalAmount(dto.getTotalAmount());
+        order.setAmount(dto.getAmount());
+        order.setDeliveryFee(dto.getDeliveryFee());
         order.setCreatedAt(dto.getCreatedAt());
         order.setUpdatedAt(dto.getUpdatedAt());
 

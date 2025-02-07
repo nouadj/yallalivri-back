@@ -1,16 +1,20 @@
 package dz.nadjtech.yallalivri.service.impl;
 
-import dz.nadjtech.yallalivri.dto.AuthRequest;
 import dz.nadjtech.yallalivri.dto.UserDTO;
 import dz.nadjtech.yallalivri.dto.UserWithPasswordDTO;
 import dz.nadjtech.yallalivri.entity.User;
 import dz.nadjtech.yallalivri.mapper.UserMapper;
 import dz.nadjtech.yallalivri.repository.UserRepository;
 import dz.nadjtech.yallalivri.service.UserService;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -92,4 +96,45 @@ public class UserServiceImpl implements UserService {
                 })
                 .map(userMapper::toDTO);
     }
+
+    @Override
+    public Mono<Object> patchUser(Long id, Map<String, Object> updates) {
+        return userRepository.findById(id)
+                .flatMap(user -> {
+                    updates.forEach((key, value) -> {
+                        switch (key) {
+                            case "email": user.setEmail((String) value); break;
+                            case "phone": user.setPhone((String) value); break;
+                        }
+                    });
+                    return userRepository.save(user);
+                })
+                .map(userMapper::toDTO); // 🔥 Vérifie que userMapper.toDTO() fonctionne bien
+    }
+
+    @Override
+    public Mono<Void> patchUserPassword(Long id, Map<String, Object> updates) {
+        if (!updates.containsKey("oldPassword") || !updates.containsKey("newPassword")) {
+            return Mono.error(new IllegalArgumentException("❌ 'oldPassword' et 'newPassword' sont requis !"));
+        }
+
+        String oldPassword = (String) updates.get("oldPassword");
+        String newPassword = (String) updates.get("newPassword");
+
+        return userRepository.findById(id)
+                .switchIfEmpty(Mono.error(new NoSuchElementException("❌ Utilisateur non trouvé !")))
+                .flatMap(user -> {
+                    if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+                        return Mono.error(new SecurityException("❌ Ancien mot de passe incorrect !"));
+                    }
+
+                    user.setPassword(passwordEncoder.encode(newPassword));
+                    return userRepository.save(user).then();
+                });
+    }
+
+
+
+
+
 }
