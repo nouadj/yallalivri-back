@@ -176,6 +176,19 @@ public class OrderServiceImpl implements OrderService {
                 .flatMap(this::enrichOrder);
     }
 
+    @Override
+    public Mono<OrderDTO> unassignOrderToCourier(Long id) {
+        return  orderRepository.findById(id) .flatMap(existingOrder -> {
+            if ( existingOrder.getStatus() == OrderStatus.ASSIGNED ) {
+                existingOrder.setCourierId(null);
+                existingOrder.setUpdatedAt(LocalDateTime.now());
+            } else {
+                return Mono.error(new Throwable());
+            }
+            return orderRepository.save(existingOrder);
+        }).map(OrderMapper::toDTO);
+    }
+
 
     private Mono<OrderDisplayDTO> enrichOrder(Order order) {
         // Récupération des informations du magasin

@@ -26,4 +26,6 @@ public interface OrderService {
     Flux<OrderDisplayDTO> getOrdersByCourierAndStatus(Long courierId, OrderStatus orderStatus);
 
     Flux<OrderDisplayDTO> getRecentOrdersByStoreId(Long storeId, LocalDateTime since);
+
+    Mono<OrderDTO> unassignOrderToCourier(Long id);
 }

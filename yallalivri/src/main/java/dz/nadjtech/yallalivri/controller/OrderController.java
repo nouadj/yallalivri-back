@@ -77,6 +77,13 @@ public class OrderController {
         return orderService.assignOrderToCourier(id, updates);
     }
 
+    @PatchMapping("/{id}/unassign")
+    public Mono<OrderDTO> unassignOrderToCourier(
+            @PathVariable Long id
+            ) {
+        return orderService.unassignOrderToCourier(id);
+    }
+
     @PatchMapping("/{id}/status")
     public Mono<OrderDTO> updateOrderStatus(
             @PathVariable Long id,
