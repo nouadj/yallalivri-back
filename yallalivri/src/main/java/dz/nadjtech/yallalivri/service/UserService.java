@@ -2,7 +2,6 @@ package dz.nadjtech.yallalivri.service;
 
 import dz.nadjtech.yallalivri.dto.UserDTO;
 import dz.nadjtech.yallalivri.dto.UserWithPasswordDTO;
-import org.springframework.http.ResponseEntity;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -22,4 +21,6 @@ public interface UserService {
     Mono<Object> patchUser(Long id, Map<String, Object> updates);
 
     Mono<Void> patchUserPassword(Long id, Map<String, Object> updates);
+
+    Mono<UserDTO> updateUserLocation(Long id, Double latitude, Double longitude);
 }

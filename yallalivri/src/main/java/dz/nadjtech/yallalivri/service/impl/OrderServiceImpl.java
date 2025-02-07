@@ -55,23 +55,32 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void notifyCouriers(OrderDTO order) {
-        if (order.getStoreLatitude() == null || order.getStoreLongitude() == null) {
-            return; // Évite une erreur si la position n'est pas renseignée
-        }
+        // 🔥 Vérifie si les coordonnées du magasin sont disponibles
+        userRepository.findById(order.getStoreId())
+                .flatMap(store -> {
+                    if (store == null || store.getLatitude() == null || store.getLongitude() == null) {
+                        return Mono.empty(); // 🚨 Évite une erreur si les coordonnées ne sont pas disponibles
+                    }
+                    String storeName = store.getName();
+                    Double storeLatitude = store.getLatitude();
+                    Double storeLongitude = store.getLongitude();
 
-        Point storeLocation = new Point(order.getStoreLatitude(), order.getStoreLongitude());
-        double maxDistanceKm = 20.0; // Rayon de recherche (20 km)
+                    Point storeLocation = new Point(storeLatitude, storeLongitude);
+                    double maxDistanceKm = 20.0; // Rayon de recherche (20 km)
 
-        userRepository.findAllByRole(UserRole.COURIER)
-                .filter(user -> user.getNotificationToken() != null && user.getLatitude() != null && user.getLongitude() != null)
-                .filter(courier -> {
-                    Point courierLocation = new Point(courier.getLatitude(), courier.getLongitude());
-                    double distance = calculateDistance(storeLocation, courierLocation);
-                    return distance <= maxDistanceKm; // Filtre les livreurs proches
+                    return userRepository.findAllByRole(UserRole.COURIER)
+                            .filter(user -> user.getNotificationToken() != null && user.getLatitude() != null && user.getLongitude() != null)
+                            .filter(courier -> {
+                                Point courierLocation = new Point(courier.getLatitude(), courier.getLongitude());
+                                double distance = calculateDistance(storeLocation, courierLocation);
+                                return distance <= maxDistanceKm;
+                            })
+                            .doOnNext(courier -> sendPushNotification(courier.getNotificationToken(), storeName, order))
+                            .then();
                 })
-                .doOnNext(courier -> sendPushNotification(courier.getNotificationToken(), order))
                 .subscribe();
     }
+
 
     private double calculateDistance(Point p1, Point p2) {
         double earthRadius = 6371.0; // Rayon de la Terre en km
@@ -86,15 +95,16 @@ public class OrderServiceImpl implements OrderService {
         return earthRadius * c;
     }
 
-    private void sendPushNotification(String expoToken, OrderDTO order) {
+    private void sendPushNotification(String expoToken, String storeName, OrderDTO order) {
+         userRepository.findById(order.getId());
         WebClient.create("https://exp.host")
                 .post()
                 .uri("/--/api/v2/push/send")
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .bodyValue(Map.of(
                         "to", expoToken,
-                        "title", "📦 Nouvelle commande disponible !",
-                        "body", "Une nouvelle commande de " + order.getCustomerName() + " est disponible.",
+                        "title", storeName+" 📦 Nouvelle commande disponible !",
+                        "body", storeName+ " une nouvelle commande de " + order.getCustomerName() + " est disponible.",
                         "data", Map.of("orderId", order.getId())
                 ))
                 .retrieve()
@@ -167,9 +177,35 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Flux<OrderDisplayDTO> getOrdersByStatusSince(String status, LocalDateTime since) {
-        return orderRepository.findByStatusAndCreatedAtAfterOrderByUpdatedAtDesc(status, since).flatMap(this::enrichOrder);
+    public Flux<OrderDisplayDTO> getOrdersByStatusSinceWithDistance(String status, LocalDateTime since, Integer maxDistanceKm, Long idCourier) {
+        return userRepository.findById(idCourier)
+                .flatMapMany(courier -> {
+                    if (courier.getLatitude() == null || courier.getLongitude() == null) {
+                        return Flux.empty(); // Si le livreur n'a pas de position, on ne renvoie rien
+                    }
+
+                    Point courierLocation = new Point(courier.getLatitude(), courier.getLongitude());
+
+                    return orderRepository.findByStatusAndCreatedAtAfterOrderByUpdatedAtDesc(status, since)
+                            .flatMap(order -> userRepository.findById(order.getStoreId()) // 🔥 Trouver le magasin
+                                    .flatMap(store -> {
+                                        if (store.getLatitude() == null || store.getLongitude() == null) {
+                                            return Mono.empty(); // Si le magasin n'a pas de coordonnées, on ignore
+                                        }
+
+                                        Point storeLocation = new Point(store.getLatitude(), store.getLongitude());
+
+                                        // 🔥 Utilisation directe de `calculateDistance()`
+                                        double distance = calculateDistance(storeLocation, courierLocation);
+
+                                        // ✅ Retourner uniquement les commandes où la distance ≤ maxDistanceKm
+                                        return distance <= maxDistanceKm ? enrichOrder(order) : Mono.empty();
+                                    })
+                            );
+                });
     }
+
+
 
     @Override
     public Mono<OrderDTO> assignOrderToCourier(Long id, Map<String, Object> updates) {

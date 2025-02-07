@@ -132,8 +132,16 @@ public class UserServiceImpl implements UserService {
                     return userRepository.save(user).then();
                 });
     }
-
-
+    @Override
+    public Mono<UserDTO> updateUserLocation(Long id, Double latitude, Double longitude) {
+        return userRepository.findById(id)
+                .flatMap(user -> {
+                    user.setLatitude(latitude);
+                    user.setLongitude(longitude);
+                    return userRepository.save(user);
+                })
+                .map(userMapper::toDTO);
+    }
 
 
 

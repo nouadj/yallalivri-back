@@ -19,7 +19,7 @@ public interface OrderService {
     Flux<OrderDisplayDTO> getAllOrderByCourierId(Long courierId);
     Flux<OrderDisplayDTO> getAllOrderByStoreId(Long storeId);
 
-    Flux<OrderDisplayDTO> getOrdersByStatusSince(String status, LocalDateTime since);
+    Flux<OrderDisplayDTO> getOrdersByStatusSinceWithDistance(String status, LocalDateTime since, Integer distance, Long idCourier);
 
     Mono<OrderDTO> assignOrderToCourier(Long id, Map<String, Object> updates);
 

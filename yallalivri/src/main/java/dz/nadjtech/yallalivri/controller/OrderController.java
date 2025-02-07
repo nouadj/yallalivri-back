@@ -25,10 +25,11 @@ public class OrderController {
     @GetMapping("/status/{status}")
     public Flux<OrderDisplayDTO> getOrdersByStatus(
             @PathVariable String status,
+            @RequestParam(required = false) Long idCourier,
+            @RequestParam(required = false, defaultValue = "20") Integer distance,
             @RequestParam(required = false, defaultValue = "5") int hours) { // ✅ 5 heures max
         LocalDateTime since = LocalDateTime.now().minus(hours, ChronoUnit.HOURS);
-        System.out.println("📡 Récupération des commandes '" + status + "' depuis : " + since);
-        return orderService.getOrdersByStatusSince(status, since)
+        return orderService.getOrdersByStatusSinceWithDistance(status, since, distance, idCourier)
                 .doOnNext(order -> System.out.println("🆕 Commande trouvée : " + order));
     }
 

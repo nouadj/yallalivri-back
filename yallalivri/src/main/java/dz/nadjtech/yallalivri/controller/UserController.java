@@ -65,4 +65,19 @@ public class UserController {
                 .thenReturn(ResponseEntity.noContent().build());
     }
 
+    @PatchMapping("/{id}/location")
+    public Mono<ResponseEntity<UserDTO>> updateUserLocation(
+            @PathVariable Long id,
+            @RequestBody Map<String, Double> location) {
+
+        if (!location.containsKey("latitude") || !location.containsKey("longitude")) {
+            return Mono.just(ResponseEntity.badRequest().build());
+        }
+
+        return userService.updateUserLocation(id, location.get("latitude"), location.get("longitude"))
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
+
+
 }
