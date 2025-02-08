@@ -1,0 +1,7 @@
+{
+  "buildCommand": "mvn clean package",
+  "startCommand": "java -jar target/*.jar",
+  "envVars": {
+    "JAVA_VERSION": "17"
+  }
+}
