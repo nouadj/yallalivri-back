@@ -3,6 +3,7 @@ package dz.nadjtech.yallalivri.service;
 import dz.nadjtech.yallalivri.dto.OrderDTO;
 import dz.nadjtech.yallalivri.dto.OrderDisplayDTO;
 import dz.nadjtech.yallalivri.dto.OrderStatus;
+import dz.nadjtech.yallalivri.dto.UserRole;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -15,7 +16,8 @@ public interface OrderService {
     Mono<OrderDTO> createOrder(OrderDTO orderDTO);
     Mono<OrderDTO> updateOrder(Long id, OrderDTO orderDTO);
     Mono<OrderDTO> updateOrderStatus(Long id, OrderStatus newOrderStatus);
-    Mono<Void> deleteOrder(Long id);
+    Mono<Void> deleteOrder(Long id,
+                           UserRole role, Long userId);
     Flux<OrderDisplayDTO> getAllOrderByCourierId(Long courierId);
     Flux<OrderDisplayDTO> getAllOrderByStoreId(Long storeId);
 

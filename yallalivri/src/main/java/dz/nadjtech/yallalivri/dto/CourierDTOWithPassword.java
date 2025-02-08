@@ -1,7 +1,10 @@
 package dz.nadjtech.yallalivri.dto;
 
-public class StoreDTOWithPassword extends StoreDTO {
+import java.time.LocalDate;
+
+public class CourierDTOWithPassword extends CourierDTO {
     private String password;
+    private LocalDate dateOfBirth;
 
     public String getPassword() {
         return password;
@@ -9,5 +12,13 @@ public class StoreDTOWithPassword extends StoreDTO {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
     }
 }

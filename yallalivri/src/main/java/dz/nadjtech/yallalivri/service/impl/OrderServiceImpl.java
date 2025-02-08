@@ -10,14 +10,17 @@ import dz.nadjtech.yallalivri.service.OrderService;
 import dz.nadjtech.yallalivri.service.StoreService;
 import org.springframework.data.geo.Point;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -96,15 +99,15 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void sendPushNotification(String expoToken, String storeName, OrderDTO order) {
-         userRepository.findById(order.getId());
+        userRepository.findById(order.getId());
         WebClient.create("https://exp.host")
                 .post()
                 .uri("/--/api/v2/push/send")
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .bodyValue(Map.of(
                         "to", expoToken,
-                        "title", storeName+" 📦 Nouvelle commande disponible !",
-                        "body", storeName+ " une nouvelle commande de " + order.getCustomerName() + " est disponible.",
+                        "title", storeName + " 📦 Nouvelle commande disponible !",
+                        "body", storeName + " une nouvelle commande de " + order.getCustomerName() + " est disponible.",
                         "data", Map.of("orderId", order.getId())
                 ))
                 .retrieve()
@@ -134,12 +137,12 @@ public class OrderServiceImpl implements OrderService {
     public Mono<OrderDTO> updateOrderStatus(Long id, OrderStatus newOrderStatus) {
         return orderRepository.findById(id)
                 .flatMap(existingOrder -> {
-                   if( isValidTransition(existingOrder.getStatus(), newOrderStatus) ) {
-                       existingOrder.setStatus(newOrderStatus);
-                       existingOrder.setUpdatedAt(LocalDateTime.now());
-                   } else {
-                       return Mono.error(new Throwable());
-                   }
+                    if (isValidTransition(existingOrder.getStatus(), newOrderStatus)) {
+                        existingOrder.setStatus(newOrderStatus);
+                        existingOrder.setUpdatedAt(LocalDateTime.now());
+                    } else {
+                        return Mono.error(new Throwable());
+                    }
                     return orderRepository.save(existingOrder);
                 }).map(OrderMapper::toDTO);
     }
@@ -150,7 +153,7 @@ public class OrderServiceImpl implements OrderService {
             case CREATED ->
                 // From CREATED, only allow ASSIGNED or CANCELLED
                     newStatus == OrderStatus.ASSIGNED || newStatus == OrderStatus.CANCELLED;
-            case ASSIGNED  ->
+            case ASSIGNED ->
                 // From SHIPPED, only allow RETURNED or DELIVERED
                     newStatus == OrderStatus.RETURNED || newStatus == OrderStatus.DELIVERED;
             default -> false;
@@ -158,16 +161,32 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Mono<Void> deleteOrder(Long id) {
-        return orderRepository.deleteById(id);
+    public Mono<Void> deleteOrder(Long id, UserRole role, Long userId) {
+        if (role == UserRole.ADMIN) {
+            return orderRepository.deleteById(id);
+        }
+
+        return orderRepository.findById(id)
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND, "Commande non trouvée")))
+                .flatMap(order -> {
+                    if (Objects.equals(order.getStoreId(), userId)) {
+                        if(order.getStatus() == OrderStatus.CREATED || order.getStatus() == OrderStatus.RETURNED) {
+                            return orderRepository.deleteById(id);
+                        } else {
+                            return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'avez pas le droit de supprimer cette commande"));
+                        }
+                    } else {
+                        return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'avez pas le droit de supprimer cette commande"));
+                    }
+                });
     }
+
 
     @Override
     public Flux<OrderDisplayDTO> getAllOrderByCourierId(Long courierId) {
         return orderRepository.findByCourierIdOrderByUpdatedAtDesc(courierId)
                 .flatMap(this::enrichOrder);
     }
-
 
 
     @Override
@@ -206,7 +225,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
 
-
     @Override
     public Mono<OrderDTO> assignOrderToCourier(Long id, Map<String, Object> updates) {
         return orderRepository.findById(id)
@@ -240,8 +258,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Mono<OrderDTO> unassignOrderToCourier(Long id) {
-        return  orderRepository.findById(id) .flatMap(existingOrder -> {
-            if ( existingOrder.getStatus() == OrderStatus.ASSIGNED ) {
+        return orderRepository.findById(id).flatMap(existingOrder -> {
+            if (existingOrder.getStatus() == OrderStatus.ASSIGNED) {
                 existingOrder.setCourierId(null);
                 existingOrder.setUpdatedAt(LocalDateTime.now());
             } else {

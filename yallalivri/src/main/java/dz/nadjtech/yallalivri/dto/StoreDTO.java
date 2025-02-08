@@ -1,6 +1,7 @@
 package dz.nadjtech.yallalivri.dto;
 
 public class StoreDTO extends UserDTO {
+
     private String address;
     private StoreType type;
 

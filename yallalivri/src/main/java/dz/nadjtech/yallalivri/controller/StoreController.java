@@ -1,6 +1,7 @@
 package dz.nadjtech.yallalivri.controller;
 
 import dz.nadjtech.yallalivri.dto.StoreDTO;
+import dz.nadjtech.yallalivri.dto.StoreDTOWithPassword;
 import dz.nadjtech.yallalivri.service.StoreService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,8 +31,8 @@ public class StoreController {
     }
 
     @PostMapping
-    public Mono<ResponseEntity<StoreDTO>> createStore(@RequestBody StoreDTO storeDTO) {
-        return storeService.createStore(storeDTO)
+    public Mono<ResponseEntity<StoreDTO>> createStore(@RequestBody StoreDTOWithPassword storeDTOWithPassword) {
+        return storeService.createStore(storeDTOWithPassword)
                 .map(ResponseEntity::ok);
     }
 

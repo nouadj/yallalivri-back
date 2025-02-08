@@ -1,6 +1,7 @@
 package dz.nadjtech.yallalivri.controller;
 
 import dz.nadjtech.yallalivri.dto.CourierDTO;
+import dz.nadjtech.yallalivri.dto.CourierDTOWithPassword;
 import dz.nadjtech.yallalivri.service.CourierService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,8 +31,8 @@ public class CourierController {
     }
 
     @PostMapping
-    public Mono<ResponseEntity<CourierDTO>> createCourier(@RequestBody CourierDTO courierDTO) {
-        return courierService.createCourier(courierDTO)
+    public Mono<ResponseEntity<CourierDTO>> createCourier(@RequestBody CourierDTOWithPassword courierDTOWithPassword) {
+        return courierService.createCourier(courierDTOWithPassword)
                 .map(ResponseEntity::ok);
     }
 

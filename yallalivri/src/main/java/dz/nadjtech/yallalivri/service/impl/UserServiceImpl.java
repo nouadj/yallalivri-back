@@ -1,13 +1,11 @@
 package dz.nadjtech.yallalivri.service.impl;
 
 import dz.nadjtech.yallalivri.dto.UserDTO;
-import dz.nadjtech.yallalivri.dto.UserWithPasswordDTO;
+import dz.nadjtech.yallalivri.dto.UserDTOWithPassword;
 import dz.nadjtech.yallalivri.entity.User;
 import dz.nadjtech.yallalivri.mapper.UserMapper;
 import dz.nadjtech.yallalivri.repository.UserRepository;
 import dz.nadjtech.yallalivri.service.UserService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -31,17 +29,15 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Mono<UserDTO> createUser(UserWithPasswordDTO userDTO) {
+    public Mono<UserDTO> createUser(UserDTOWithPassword userDTO) {
         User user = userMapper.toEntity(userDTO);
-
         user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-
         return userRepository.save(user)
                 .map(userMapper::toDTO);
     }
 
     @Override
-    public Mono<UserDTO> updateUser(Long id, UserWithPasswordDTO userDTO) {
+    public Mono<UserDTO> updateUser(Long id, UserDTOWithPassword userDTO) {
         return userRepository.findById(id)
                 .flatMap(existingUser -> {
                     existingUser.setName(userDTO.getName());
@@ -83,7 +79,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Mono<UserWithPasswordDTO> findByEmailWithPassword(String email) {
+    public Mono<UserDTOWithPassword> findByEmailWithPassword(String email) {
         return userRepository.findByEmail(email).map(userMapper::toWithPasswordDTO);
     }
 

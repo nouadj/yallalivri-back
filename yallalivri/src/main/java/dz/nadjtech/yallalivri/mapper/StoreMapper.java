@@ -13,13 +13,6 @@ public class StoreMapper {
         }
 
         StoreDTO dto = new StoreDTO();
-        dto.setId(store.getId());
-        dto.setName(store.getName());
-        dto.setEmail(store.getEmail());
-        dto.setRole(store.getRole());
-        dto.setPhone(store.getPhone());
-        dto.setCreatedAt(store.getCreatedAt());
-        dto.setUpdatedAt(store.getUpdatedAt());
         dto.setAddress(store.getAddress());
         dto.setType(store.getType());
 
@@ -32,14 +25,8 @@ public class StoreMapper {
         }
 
         Store store = new Store();
-        store.setId(dto.getId());
-        store.setName(dto.getName());
-        store.setEmail(dto.getEmail());
-        store.setRole(dto.getRole());
-        store.setPhone(dto.getPhone());
-        store.setCreatedAt(dto.getCreatedAt());
-        store.setUpdatedAt(dto.getUpdatedAt());
         store.setAddress(dto.getAddress());
+        store.setType(dto.getType());
 
         return store;
     }

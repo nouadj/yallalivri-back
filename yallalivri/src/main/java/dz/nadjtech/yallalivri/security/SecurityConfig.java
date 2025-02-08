@@ -3,6 +3,7 @@ package dz.nadjtech.yallalivri.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -16,50 +17,38 @@ import reactor.core.publisher.Mono;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
-   @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+   /*@Bean
+   public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, JwtAuthenticationFilter jwtFilter) {
+       return http
+               .csrf(ServerHttpSecurity.CsrfSpec::disable)
+               .authorizeExchange(exchanges -> exchanges
+                       .pathMatchers("/auth/login").permitAll()
+                       .pathMatchers("/api/**").authenticated()
+                       .anyExchange().authenticated()
+               )
+               .oauth2ResourceServer(oauth2 -> oauth2
+                       .jwt(jwtSpec -> jwtSpec.jwtAuthenticationConverter(reactiveJwtAuthenticationConverter()))
+               )
+               .addFilterBefore(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION) // 🔥 Ajoute le filtre
+               .build();
+   }*/
+
+    @Bean
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, JwtAuthenticationFilter jwtFilter) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers("/auth/login").permitAll()
-                        .pathMatchers("/api/**").authenticated()
-                        .pathMatchers("/auth/me").authenticated()
+                        .pathMatchers("/**").permitAll()
                         .anyExchange().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        // Personnalise l'entry point
-                        .authenticationEntryPoint((exchange, ex) -> {
-                            // Ici, on log l’exception pour voir le détail
-                            ex.printStackTrace();  // ou un logger
-                            return Mono.error(ex); // ou renvoie une réponse custom
-                        })
                         .jwt(jwtSpec -> jwtSpec.jwtAuthenticationConverter(reactiveJwtAuthenticationConverter()))
                 )
+                .addFilterBefore(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION) // 🔥 Ajoute le filtre
                 .build();
     }
 
-
-    /*
-        @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
-        return http
-                .csrf(ServerHttpSecurity.CsrfSpec::disable)
-                .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/**").permitAll()
-                        .pathMatchers("/auth/me").authenticated()
-                        .anyExchange().authenticated()
-                )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        // Personnalise l'entry point
-                        .authenticationEntryPoint((exchange, ex) -> {
-                            // Ici, on log l’exception pour voir le détail
-                            ex.printStackTrace();  // ou un logger
-                            return Mono.error(ex); // ou renvoie une réponse custom
-                        })
-                        .jwt(jwtSpec -> jwtSpec.jwtAuthenticationConverter(reactiveJwtAuthenticationConverter()))
-                )
-                .build();
-    } */
 
     private ReactiveJwtAuthenticationConverter reactiveJwtAuthenticationConverter() {
         ReactiveJwtAuthenticationConverter converter = new ReactiveJwtAuthenticationConverter();

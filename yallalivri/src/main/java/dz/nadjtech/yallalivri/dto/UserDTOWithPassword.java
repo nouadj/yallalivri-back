@@ -1,6 +1,6 @@
 package dz.nadjtech.yallalivri.dto;
 
-public class UserWithPasswordDTO extends UserDTO {
+public class UserDTOWithPassword extends UserDTO {
     String password;
 
     public String getPassword() {

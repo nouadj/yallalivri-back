@@ -1,8 +1,12 @@
 package dz.nadjtech.yallalivri.mapper;
 
 import dz.nadjtech.yallalivri.dto.CourierDTO;
+import dz.nadjtech.yallalivri.dto.CourierDTOWithPassword;
 import dz.nadjtech.yallalivri.entity.Courier;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
+import java.time.Period;
 
 @Component
 public class CourierMapper {
@@ -13,14 +17,17 @@ public class CourierMapper {
         }
 
         CourierDTO dto = new CourierDTO();
-        dto.setId(courier.getId());
+        /*dto.setId(courier.getId());
         dto.setName(courier.getName());
         dto.setEmail(courier.getEmail());
         dto.setRole(courier.getRole());
         dto.setPhone(courier.getPhone());
         dto.setCreatedAt(courier.getCreatedAt());
-        dto.setUpdatedAt(courier.getUpdatedAt());
-        dto.setAge(30);
+        dto.setUpdatedAt(courier.getUpdatedAt());*/
+        if (courier.getDateOfBirth() != null) {
+            int age = Period.between(courier.getDateOfBirth(), LocalDate.now()).getYears();
+            dto.setAge(age);
+        }
        // dto.setDateOfBirth(courier.getDateOfBirth());
 
         return dto;
@@ -33,12 +40,16 @@ public class CourierMapper {
 
         Courier courier = new Courier();
         courier.setId(dto.getId());
-        courier.setName(dto.getName());
+        if( dto instanceof CourierDTOWithPassword ){
+            courier.setDateOfBirth(((CourierDTOWithPassword) dto).getDateOfBirth());
+
+        }
+       /* courier.setName(dto.getName());
         courier.setEmail(dto.getEmail());
         courier.setRole(dto.getRole());
         courier.setPhone(dto.getPhone());
         courier.setCreatedAt(dto.getCreatedAt());
-        courier.setUpdatedAt(dto.getUpdatedAt());
+        courier.setUpdatedAt(dto.getUpdatedAt());*/
         //courier.setDateOfBirth(dto.getDateOfBirth());
 
         return courier;

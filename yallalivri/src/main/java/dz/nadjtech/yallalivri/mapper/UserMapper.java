@@ -1,7 +1,7 @@
 package dz.nadjtech.yallalivri.mapper;
 
 import dz.nadjtech.yallalivri.dto.UserDTO;
-import dz.nadjtech.yallalivri.dto.UserWithPasswordDTO;
+import dz.nadjtech.yallalivri.dto.UserDTOWithPassword;
 import dz.nadjtech.yallalivri.entity.User;
 import org.springframework.stereotype.Component;
 
@@ -28,12 +28,12 @@ public class UserMapper {
         return dto;
     }
 
-    public UserWithPasswordDTO toWithPasswordDTO(User user) {
+    public UserDTOWithPassword toWithPasswordDTO(User user) {
         if (user == null) {
             return null;
         }
 
-        UserWithPasswordDTO dto = new UserWithPasswordDTO();
+        UserDTOWithPassword dto = new UserDTOWithPassword();
         dto.setId(user.getId());
         dto.setName(user.getName());
         dto.setEmail(user.getEmail());
