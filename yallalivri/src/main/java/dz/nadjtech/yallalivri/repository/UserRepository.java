@@ -7,10 +7,8 @@ import org.springframework.stereotype.Repository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.util.Locale;
-
 @Repository
-public interface UserRepository extends ReactiveCrudRepository<User, Long> {
+public interface UserService extends ReactiveCrudRepository<User, Long> {
     Mono<User> findByEmail(String email);
 
     Flux<User> findAllByRole(UserRole userRole);
