@@ -1,8 +1,11 @@
 package dz.nadjtech.yallalivri.entity;
 
+import dz.nadjtech.yallalivri.dto.StoreType;
 import dz.nadjtech.yallalivri.dto.UserRole;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.relational.core.mapping.Table;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Table("users")
@@ -10,17 +13,19 @@ public class User {
 
     @Id
     private Long id;
-    private String name;
-    private String email;
     private String password;
-    private UserRole role; // STORE, COURIER, CUSTOMER
+    private String name;
+    private UserRole role;
     private String phone;
-
+    private String email;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String address;
     private String notificationToken;
     private Double latitude;
     private Double longitude;
+    private LocalDate dateOfBirth;
+    private StoreType storeType;
 
     public Long getId() {
         return id;
@@ -30,28 +35,20 @@ public class User {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
     public String getPassword() {
         return password;
     }
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public UserRole getRole() {
@@ -70,6 +67,14 @@ public class User {
         this.phone = phone;
     }
 
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -84,6 +89,14 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
     }
 
     public String getNotificationToken() {
@@ -108,5 +121,21 @@ public class User {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public StoreType getStoreType() {
+        return storeType;
+    }
+
+    public void setStoreType(StoreType storeType) {
+        this.storeType = storeType;
     }
 }

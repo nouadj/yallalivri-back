@@ -24,9 +24,13 @@ public class UserMapper {
         dto.setNotificationToken(user.getNotificationToken());
         dto.setLatitude(user.getLatitude());
         dto.setLongitude(user.getLongitude());
+        dto.setAddress(user.getAddress());
+        dto.setDateOfBirth(user.getDateOfBirth());
+        dto.setStoreType(user.getStoreType());
 
         return dto;
     }
+
 
     public UserDTOWithPassword toWithPasswordDTO(User user) {
         if (user == null) {
@@ -41,6 +45,12 @@ public class UserMapper {
         dto.setPhone(user.getPhone());
         dto.setCreatedAt(user.getCreatedAt());
         dto.setUpdatedAt(user.getUpdatedAt());
+        dto.setNotificationToken(user.getNotificationToken());
+        dto.setLatitude(user.getLatitude());
+        dto.setLongitude(user.getLongitude());
+        dto.setAddress(user.getAddress());
+        dto.setDateOfBirth(user.getDateOfBirth());
+        dto.setStoreType(user.getStoreType());
         dto.setPassword(user.getPassword());
 
         return dto;
@@ -59,8 +69,15 @@ public class UserMapper {
         user.setPhone(dto.getPhone());
         user.setCreatedAt(dto.getCreatedAt());
         user.setUpdatedAt(dto.getUpdatedAt());
+        user.setNotificationToken(dto.getNotificationToken());
+        user.setLatitude(dto.getLatitude());
+        user.setLongitude(dto.getLongitude());
+        user.setAddress(dto.getAddress());
+        user.setDateOfBirth(dto.getDateOfBirth());
+        user.setStoreType(dto.getStoreType());
 
         return user;
     }
+
 
 }

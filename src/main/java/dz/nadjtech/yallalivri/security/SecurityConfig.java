@@ -10,19 +10,24 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.reactive.CorsWebFilter;
+import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @Configuration
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
-   /*@Bean
+  @Bean
    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, JwtAuthenticationFilter jwtFilter) {
        return http
                .csrf(ServerHttpSecurity.CsrfSpec::disable)
                .authorizeExchange(exchanges -> exchanges
-                       .pathMatchers("/auth/login").permitAll()
+                       .pathMatchers("/api/auth/login").permitAll()
                        .pathMatchers("/api/**").authenticated()
                        .anyExchange().authenticated()
                )
@@ -31,23 +36,37 @@ public class SecurityConfig {
                )
                .addFilterBefore(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION) // 🔥 Ajoute le filtre
                .build();
-   }*/
+   }
+ /* @Bean
+  public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, JwtAuthenticationFilter jwtFilter) {
+      return http
+              .csrf(ServerHttpSecurity.CsrfSpec::disable)
+              .authorizeExchange(exchanges -> exchanges
+                      .pathMatchers("/api/auth/login").permitAll()
+                      .pathMatchers("/**").permitAll()
+                      .anyExchange().authenticated()
+              )
+              .oauth2ResourceServer(oauth2 -> oauth2
+                      .jwt(jwtSpec -> jwtSpec.jwtAuthenticationConverter(reactiveJwtAuthenticationConverter()))
+              )
+              .addFilterBefore(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION) // 🔥 Ajoute le filtre
+              .build();
+  }
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, JwtAuthenticationFilter jwtFilter) {
-        return http
-                .csrf(ServerHttpSecurity.CsrfSpec::disable)
-                .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/auth/login").permitAll()
-                        .pathMatchers("/**").permitAll()
-                        .anyExchange().authenticated()
-                )
-                .oauth2ResourceServer(oauth2 -> oauth2
-                        .jwt(jwtSpec -> jwtSpec.jwtAuthenticationConverter(reactiveJwtAuthenticationConverter()))
-                )
-                .addFilterBefore(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION) // 🔥 Ajoute le filtre
-                .build();
+    public CorsWebFilter corsWebFilter() {
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        corsConfig.setAllowedOrigins(List.of("http://localhost:5173")); // 🔥 FRONTEND UNIQUEMENT
+        corsConfig.setAllowedMethods(List.of("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"));
+        corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        corsConfig.setAllowCredentials(true); // 🔥 IMPORTANT pour les JWT et cookies
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfig);
+
+        return new CorsWebFilter(source);
     }
+*/
 
 
     private ReactiveJwtAuthenticationConverter reactiveJwtAuthenticationConverter() {

@@ -1,5 +1,6 @@
 package dz.nadjtech.yallalivri.dto;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public class UserDTO {
@@ -10,9 +11,12 @@ public class UserDTO {
     private String email;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String address;
     private String notificationToken;
     private Double latitude;
     private Double longitude;
+    private LocalDate dateOfBirth;
+    private StoreType storeType;
 
     public Long getId() {
         return id;
@@ -70,6 +74,14 @@ public class UserDTO {
         this.updatedAt = updatedAt;
     }
 
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
     public String getNotificationToken() {
         return notificationToken;
     }
@@ -92,5 +104,21 @@ public class UserDTO {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public StoreType getStoreType() {
+        return storeType;
+    }
+
+    public void setStoreType(StoreType storeType) {
+        this.storeType = storeType;
     }
 }

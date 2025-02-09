@@ -2,12 +2,11 @@ package dz.nadjtech.yallalivri.service.impl;
 
 import dz.nadjtech.yallalivri.dto.*;
 import dz.nadjtech.yallalivri.entity.Order;
+import dz.nadjtech.yallalivri.entity.User;
 import dz.nadjtech.yallalivri.mapper.OrderMapper;
 import dz.nadjtech.yallalivri.repository.OrderRepository;
 import dz.nadjtech.yallalivri.repository.UserRepository;
-import dz.nadjtech.yallalivri.service.CourierService;
 import dz.nadjtech.yallalivri.service.OrderService;
-import dz.nadjtech.yallalivri.service.StoreService;
 import org.springframework.data.geo.Point;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -27,14 +26,10 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
-    private final StoreService storeService;
-    private final CourierService courierService;
 
-    public OrderServiceImpl(OrderRepository orderRepository, UserRepository userRepository, StoreService storeService, CourierService courierService) {
+    public OrderServiceImpl(OrderRepository orderRepository, UserRepository userRepository) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
-        this.storeService = storeService;
-        this.courierService = courierService;
     }
 
 
@@ -272,24 +267,24 @@ public class OrderServiceImpl implements OrderService {
 
     private Mono<OrderDisplayDTO> enrichOrder(Order order) {
         // Récupération des informations du magasin
-        Mono<StoreDTO> storeMono = storeService.getStoreById(order.getStoreId());
+        Mono<User> storeMono = userRepository.findById(order.getStoreId());
 
         // Pour le courier, si order.getCourierId() est null ou que le service ne trouve rien,
         // on fournit un objet CourierDTO par défaut.
-        Mono<CourierDTO> courierMono;
+        Mono<User> courierMono;
         if (order.getCourierId() != null) {
-            courierMono = courierService.getCourierById(order.getCourierId())
-                    .defaultIfEmpty(new CourierDTO());
+            courierMono = userRepository.findById(order.getCourierId())
+                    .defaultIfEmpty(new User());
         } else {
             // Si l'id du courier est null, on crée directement un CourierDTO par défaut.
-            courierMono = Mono.just(new CourierDTO());
+            courierMono = Mono.just(new User());
         }
 
         // Combine les deux appels asynchrones et enrichit l'objet Order en OrderDisplayDTO
         return Mono.zip(storeMono, courierMono)
                 .map(tuple -> {
-                    StoreDTO storeDTO = tuple.getT1();
-                    CourierDTO courierDTO = tuple.getT2();
+                    User storeDTO = tuple.getT1();
+                    User courierDTO = tuple.getT2();
 
                     // Extraction des informations enrichissantes
                     String storeName = storeDTO.getName();

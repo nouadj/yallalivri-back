@@ -49,7 +49,7 @@ public class UserController {
     }
 
     // 🔹 Créer un nouvel utilisateur (ADMIN uniquement)
-    @PostMapping
+  /*  @PostMapping
     public Mono<ResponseEntity<Object>> createUser(@RequestBody UserDTOWithPassword userDTO, ServerWebExchange exchange) {
         return jwtUtil.getUserIdAndRoleFromJWT(exchange)
                 .flatMap(claims -> {
@@ -59,6 +59,15 @@ public class UserController {
                     }
                     return userService.createUser(userDTO).map(ResponseEntity::ok);
                 });
+    }
+*/
+
+    // 🔹 Créer un nouvel utilisateur (ADMIN uniquement)
+    @PostMapping
+    public Mono<ResponseEntity<Object>> createUser(@RequestBody UserDTOWithPassword userDTO, ServerWebExchange exchange) {
+
+                    return userService.createUser(userDTO).map(ResponseEntity::ok);
+
     }
 
     // 🔹 Modifier partiellement un utilisateur (ex: email, téléphone)
