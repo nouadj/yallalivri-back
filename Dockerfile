@@ -1,15 +1,25 @@
-# Étape 1: Construire l'application avec Maven
+# Étape 1: Build avec Maven
 FROM maven:3.8.7-eclipse-temurin-17 AS build
 WORKDIR /app
-COPY . .
+
+# Copier d'abord le fichier POM pour éviter de reconstruire les dépendances à chaque changement de code
+COPY pom.xml .
+RUN mvn dependency:go-offline
+
+# Copier le reste du projet
+COPY src ./src
+
+# Compiler le projet
 RUN mvn clean package -DskipTests
 
-# Étape 2: Utiliser une image Java légère pour exécuter l'application
+# Étape 2: Exécution avec OpenJDK
 FROM eclipse-temurin:17-jdk
 WORKDIR /app
+
+# Copier le fichier JAR généré depuis l’étape précédente
 COPY --from=build /app/target/*.jar app.jar
 
-# Exposer le port (par défaut 8080 pour Spring Boot)
+# Exposer le port de l'application
 EXPOSE 8080
 
 # Lancer l'application
