@@ -40,7 +40,7 @@ public class UserController {
                     }
 
                     if (email != null && !email.isEmpty()) {
-                        return userService.getUserByEmail(email)
+                        return userService.findByEmail(email)
                                 .map(user -> ResponseEntity.ok(Flux.just(user)))
                                 .defaultIfEmpty(ResponseEntity.notFound().build());
                     }

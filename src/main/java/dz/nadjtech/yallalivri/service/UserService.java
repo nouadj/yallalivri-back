@@ -25,8 +25,6 @@ public interface UserService {
 
     Mono<UserDTO> updateUserLocation(Long id, Double latitude, Double longitude);
 
-    Mono<UserDTO> getUserByEmail(String email);
-
     public Mono<Void> patchUserPasswordAdmin(Long id, Map<String, Object> updates);
 
     Flux<UserDTO> searchUsers(Map<String, String> filters);
