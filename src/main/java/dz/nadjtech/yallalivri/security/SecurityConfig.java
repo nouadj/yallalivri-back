@@ -22,22 +22,22 @@ import java.util.List;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
+    /* @Bean
+      public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, JwtAuthenticationFilter jwtFilter) {
+          return http
+                  .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                  .authorizeExchange(exchanges -> exchanges
+                          .pathMatchers("/api/auth/login").permitAll()
+                          .pathMatchers("/api/**").authenticated()
+                          .anyExchange().authenticated()
+                  )
+                  .oauth2ResourceServer(oauth2 -> oauth2
+                          .jwt(jwtSpec -> jwtSpec.jwtAuthenticationConverter(reactiveJwtAuthenticationConverter()))
+                  )
+                  .addFilterBefore(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION) // 🔥 Ajoute le filtre
+                  .build();
+      }*/
   @Bean
-   public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, JwtAuthenticationFilter jwtFilter) {
-       return http
-               .csrf(ServerHttpSecurity.CsrfSpec::disable)
-               .authorizeExchange(exchanges -> exchanges
-                       .pathMatchers("/api/auth/login").permitAll()
-                       .pathMatchers("/api/**").authenticated()
-                       .anyExchange().authenticated()
-               )
-               .oauth2ResourceServer(oauth2 -> oauth2
-                       .jwt(jwtSpec -> jwtSpec.jwtAuthenticationConverter(reactiveJwtAuthenticationConverter()))
-               )
-               .addFilterBefore(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION) // 🔥 Ajoute le filtre
-               .build();
-   }
- /* @Bean
   public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http, JwtAuthenticationFilter jwtFilter) {
       return http
               .csrf(ServerHttpSecurity.CsrfSpec::disable)
@@ -52,7 +52,7 @@ public class SecurityConfig {
               .addFilterBefore(jwtFilter, SecurityWebFiltersOrder.AUTHENTICATION) // 🔥 Ajoute le filtre
               .build();
   }
-
+/*
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration corsConfig = new CorsConfiguration();
