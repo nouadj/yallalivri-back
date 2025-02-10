@@ -30,15 +30,37 @@ public class UserController {
 
     // 🔹 Récupérer tous les utilisateurs (ADMIN uniquement)
     @GetMapping
-    public Mono<ResponseEntity<Flux<UserDTO>>> getAllUsers(ServerWebExchange exchange) {
+    public Mono<ResponseEntity<Flux<UserDTO>>> getUsers(@RequestParam(value = "email", required = false) String email, ServerWebExchange exchange) {
+        return jwtUtil.getUserIdAndRoleFromJWT(exchange)
+                .flatMap(claims -> {
+                    UserRole role = UserRole.valueOf((String) claims.get("role"));
+
+                    if (role != ADMIN) {
+                        return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(Flux.empty()));
+                    }
+
+                    if (email != null && !email.isEmpty()) {
+                        return userService.getUserByEmail(email)
+                                .map(user -> ResponseEntity.ok(Flux.just(user)))
+                                .defaultIfEmpty(ResponseEntity.notFound().build());
+                    }
+
+                    return Mono.just(ResponseEntity.ok(userService.getAllUsers()));
+                });
+    }
+
+
+    @GetMapping("/search")
+    public Mono<ResponseEntity<Flux<UserDTO>>> searchUsers(@RequestParam Map<String, String> filters, ServerWebExchange exchange) {
         return jwtUtil.getUserIdAndRoleFromJWT(exchange)
                 .flatMap(claims -> {
                     if (UserRole.valueOf((String) claims.get("role")) != ADMIN) {
                         return Mono.just(ResponseEntity.status(HttpStatus.FORBIDDEN).body(Flux.empty()));
                     }
-                    return Mono.just(ResponseEntity.ok(userService.getAllUsers()));
+                    return Mono.just(ResponseEntity.ok(userService.searchUsers(filters)));
                 });
     }
+
 
     // 🔹 Récupérer un utilisateur par ID
     @GetMapping("/{userId}")
@@ -49,7 +71,7 @@ public class UserController {
     }
 
     // 🔹 Créer un nouvel utilisateur (ADMIN uniquement)
-  /*  @PostMapping
+  @PostMapping
     public Mono<ResponseEntity<Object>> createUser(@RequestBody UserDTOWithPassword userDTO, ServerWebExchange exchange) {
         return jwtUtil.getUserIdAndRoleFromJWT(exchange)
                 .flatMap(claims -> {
@@ -60,15 +82,8 @@ public class UserController {
                     return userService.createUser(userDTO).map(ResponseEntity::ok);
                 });
     }
-*/
 
-    // 🔹 Créer un nouvel utilisateur (ADMIN uniquement)
-    @PostMapping
-    public Mono<ResponseEntity<Object>> createUser(@RequestBody UserDTOWithPassword userDTO, ServerWebExchange exchange) {
 
-                    return userService.createUser(userDTO).map(ResponseEntity::ok);
-
-    }
 
     // 🔹 Modifier partiellement un utilisateur (ex: email, téléphone)
     @PatchMapping("/{userId}")
@@ -103,6 +118,24 @@ public class UserController {
                     }
 
                     return userService.patchUserPassword(userId, updates)
+                            .then(Mono.just(ResponseEntity.ok("✅ Mot de passe mis à jour avec succès.")));
+                });
+    }
+
+
+    // 🔹 Changer le mot de passe
+    @PatchMapping("/{userId}/password-admin")
+    public Mono<ResponseEntity<Object>> patchUserPasswordAdmin(@PathVariable Long userId, @RequestBody Map<String, Object> updates, ServerWebExchange exchange) {
+        return jwtUtil.getUserIdAndRoleFromJWT(exchange)
+                .flatMap(claims -> {
+                    UserRole roleFromToken = UserRole.valueOf((String) claims.get("role"));
+
+                    if (roleFromToken != ADMIN) {
+                        return Mono.just(ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body("❌ Vous ne pouvez modifier que votre propre mot de passe."));
+                    }
+
+                    return userService.patchUserPasswordAdmin(userId, updates)
                             .then(Mono.just(ResponseEntity.ok("✅ Mot de passe mis à jour avec succès.")));
                 });
     }

@@ -99,8 +99,12 @@ public class UserServiceImpl implements UserService {
                 .flatMap(user -> {
                     updates.forEach((key, value) -> {
                         switch (key) {
-                            case "email": user.setEmail((String) value); break;
-                            case "phone": user.setPhone((String) value); break;
+                            case "email":
+                                user.setEmail((String) value);
+                                break;
+                            case "phone":
+                                user.setPhone((String) value);
+                                break;
                         }
                     });
                     return userRepository.save(user);
@@ -128,6 +132,7 @@ public class UserServiceImpl implements UserService {
                     return userRepository.save(user).then();
                 });
     }
+
     @Override
     public Mono<UserDTO> updateUserLocation(Long id, Double latitude, Double longitude) {
         return userRepository.findById(id)
@@ -136,6 +141,34 @@ public class UserServiceImpl implements UserService {
                     user.setLongitude(longitude);
                     return userRepository.save(user);
                 })
+                .map(userMapper::toDTO);
+    }
+
+    @Override
+    public Mono<UserDTO> getUserByEmail(String email) {
+        return userRepository.findByEmail(email).map(userMapper::toDTO);
+    }
+
+    @Override
+    public Mono<Void> patchUserPasswordAdmin(Long id, Map<String, Object> updates) {
+
+        String newPassword = (String) updates.get("newPassword");
+
+        return userRepository.findById(id)
+                .switchIfEmpty(Mono.error(new NoSuchElementException("❌ Utilisateur non trouvé !")))
+                .flatMap(user -> {
+                    user.setPassword(passwordEncoder.encode(newPassword));
+                    return userRepository.save(user).then();
+                });
+    }
+
+    public Flux<UserDTO> searchUsers(Map<String, String> filters) {
+        return userRepository.findAll()
+                .filter(user -> filters.getOrDefault("name", "").isEmpty() || user.getName().toLowerCase().contains(filters.get("name").toLowerCase()))
+                .filter(user -> filters.getOrDefault("email", "").isEmpty() || user.getEmail().toLowerCase().contains(filters.get("email").toLowerCase()))
+                .filter(user -> filters.getOrDefault("role", "").isEmpty() || user.getRole().name().equalsIgnoreCase(filters.get("role")))
+                .filter(user -> filters.getOrDefault("phone", "").isEmpty() || user.getPhone().contains(filters.get("phone")))
+                .filter(user -> filters.getOrDefault("address", "").isEmpty() || user.getAddress().toLowerCase().contains(filters.get("address").toLowerCase()))
                 .map(userMapper::toDTO);
     }
 
