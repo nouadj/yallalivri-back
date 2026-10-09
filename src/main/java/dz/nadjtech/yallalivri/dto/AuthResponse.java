@@ -1,19 +1,17 @@
 package dz.nadjtech.yallalivri.dto;
 
+import dz.nadjtech.yallalivri.enums.UserRole;
+import lombok.*;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class AuthResponse {
     private String token;
     private Long userId;
-
-    public AuthResponse(String token, Long userId) {
-        this.token = token;
-        this.userId = userId;
-    }
-
-    public String getToken() {
-        return token;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
+    private UserRole role;
+    private String name;
+    private String email;
 }

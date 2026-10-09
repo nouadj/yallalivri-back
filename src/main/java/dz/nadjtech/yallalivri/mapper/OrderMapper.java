@@ -8,33 +8,33 @@ import org.springframework.stereotype.Component;
 @Component
 public class OrderMapper {
 
-    static public OrderDTO toDTO(Order order) {
+    public OrderDTO toDTO(Order order) {
         if (order == null) return null;
 
-        OrderDTO dto = new OrderDTO();
-        dto.setId(order.getId());
-        dto.setStoreId(order.getStoreId());
-        dto.setCourierId(order.getCourierId());
-        dto.setCustomerName(order.getCustomerName());
-        dto.setCustomerPhone(order.getCustomerPhone());
-        dto.setCustomerAddress(order.getCustomerAddress());
-        dto.setStatus(order.getStatus());
-        dto.setAmount(order.getAmount());
-        dto.setDeliveryFee(order.getDeliveryFee());
-        dto.setCreatedAt(order.getCreatedAt());
-        dto.setUpdatedAt(order.getUpdatedAt());
-
-        return dto;
+        return OrderDTO.builder()
+                .id(order.getId())
+                .storeId(order.getStore().getId())
+                .courierId(order.getCourier() != null ? order.getCourier().getId() : null)
+                .customerName(order.getCustomerName())
+                .customerPhone(order.getCustomerPhone())
+                .customerAddress(order.getCustomerAddress())
+                .status(order.getStatus())
+                .amount(order.getAmount())
+                .deliveryFee(order.getDeliveryFee())
+                .createdAt(order.getCreatedAt())
+                .updatedAt(order.getUpdatedAt())
+                .storeLatitude(order.getStore().getLatitude())
+                .storeLongitude(order.getStore().getLongitude())
+                .build();
     }
 
-    public static OrderDisplayDTO toDisplayDTO(Order order, String storeName, String storeAddress, String courierName) {
+    public OrderDisplayDTO toDisplayDTO(Order order) {
         if (order == null) return null;
 
         OrderDisplayDTO dto = new OrderDisplayDTO();
-
         dto.setId(order.getId());
-        dto.setStoreId(order.getStoreId());
-        dto.setCourierId(order.getCourierId());
+        dto.setStoreId(order.getStore().getId());
+        dto.setCourierId(order.getCourier() != null ? order.getCourier().getId() : null);
         dto.setCustomerName(order.getCustomerName());
         dto.setCustomerPhone(order.getCustomerPhone());
         dto.setCustomerAddress(order.getCustomerAddress());
@@ -43,31 +43,13 @@ public class OrderMapper {
         dto.setDeliveryFee(order.getDeliveryFee());
         dto.setCreatedAt(order.getCreatedAt());
         dto.setUpdatedAt(order.getUpdatedAt());
-
-        dto.setStoreName(storeName);
-        dto.setStoreAddress(storeAddress);
-        dto.setCourierName(courierName);
-
+        dto.setStoreLatitude(order.getStore().getLatitude());
+        dto.setStoreLongitude(order.getStore().getLongitude());
+        dto.setStoreName(order.getStore().getName());
+        dto.setStorePhone(order.getStore().getPhone());
+        dto.setCourierPhone(order.getCourier() != null ? order.getCourier().getPhone() : null);
+        dto.setStoreAddress(order.getStore().getAddress());
+        dto.setCourierName(order.getCourier() != null ? order.getCourier().getName() : "");
         return dto;
-    }
-
-
-    public static Order toEntity(OrderDTO dto) {
-        if (dto == null) return null;
-
-        Order order = new Order();
-        order.setId(dto.getId());
-        order.setStoreId(dto.getStoreId());
-        order.setCourierId(dto.getCourierId());
-        order.setCustomerName(dto.getCustomerName());
-        order.setCustomerPhone(dto.getCustomerPhone());
-        order.setCustomerAddress(dto.getCustomerAddress());
-        order.setStatus(dto.getStatus());
-        order.setAmount(dto.getAmount());
-        order.setDeliveryFee(dto.getDeliveryFee());
-        order.setCreatedAt(dto.getCreatedAt());
-        order.setUpdatedAt(dto.getUpdatedAt());
-
-        return order;
     }
 }

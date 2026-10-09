@@ -1,31 +1,22 @@
 package dz.nadjtech.yallalivri.service;
 
-import dz.nadjtech.yallalivri.dto.UserDTO;
-import dz.nadjtech.yallalivri.dto.UserDTOWithPassword;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import dz.nadjtech.yallalivri.dto.*;
+import dz.nadjtech.yallalivri.security.CurrentUser;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 public interface UserService {
-    Flux<UserDTO> getAllUsers();
-    Mono<UserDTO> getUserById(Long id);
-    Mono<UserDTO> createUser(UserDTOWithPassword userDTO);
-    Mono<UserDTO> updateUser(Long id, UserDTOWithPassword userDTO);
-    Mono<Void> deleteUser(Long id);
-    Mono<UserDTO> findByEmail(String email);
-    Mono<UserDTOWithPassword> findByEmailWithPassword(String email);
-
-    Mono<UserDTO> updateNotificationToken(Long id, String token);
-
-    Mono<Object> patchUser(Long id, Map<String, Object> updates);
-
-    Mono<Void> patchUserPassword(Long id, Map<String, Object> updates);
-
-    Mono<UserDTO> updateUserLocation(Long id, Double latitude, Double longitude);
-
-    public Mono<Void> patchUserPasswordAdmin(Long id, Map<String, Object> updates);
-
-    Flux<UserDTO> searchUsers(Map<String, String> filters);
+    List<UserDTO> getAllUsers(CurrentUser currentUser);
+    UserDTO getUserById(Long id, CurrentUser currentUser);
+    UserDTO createUser(UserDTOWithPassword userDTO, CurrentUser currentUser);
+    UserDTO updateUser(Long id, UserDTOWithPassword userDTO, CurrentUser currentUser);
+    UserDTO patchUser(Long id, Map<String, Object> updates, CurrentUser currentUser);
+    void patchUserPassword(Long id, PasswordUpdateRequest request, CurrentUser currentUser);
+    void patchUserPasswordAdmin(Long id, AdminPasswordUpdateRequest request, CurrentUser currentUser);
+    void deleteUser(Long id, CurrentUser currentUser);
+    UserDTO findByEmail(String email, CurrentUser currentUser);
+    UserDTO updateNotificationToken(Long id, NotificationTokenRequest request, CurrentUser currentUser);
+    UserDTO updateUserLocation(Long id, LocationUpdateRequest request, CurrentUser currentUser);
+    List<UserDTO> searchUsers(Map<String, String> filters, CurrentUser currentUser);
 }

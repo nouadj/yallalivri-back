@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/db.changelog-master.yaml
+  - changeSet:
+      id: h2-text-compatibility
+      author: test
+      dbms: h2
+      changes:
+        - modifyDataType:
+            tableName: users
+            columnName: address
+            newDataType: VARCHAR
+        - modifyDataType:
+            tableName: orders
+            columnName: customer_address
+            newDataType: VARCHAR

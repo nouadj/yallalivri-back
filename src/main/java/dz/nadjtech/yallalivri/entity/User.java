@@ -1,141 +1,81 @@
 package dz.nadjtech.yallalivri.entity;
 
-import dz.nadjtech.yallalivri.dto.StoreType;
-import dz.nadjtech.yallalivri.dto.UserRole;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Table;
+import dz.nadjtech.yallalivri.enums.StoreType;
+import dz.nadjtech.yallalivri.enums.UserRole;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Table("users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Entity
+@Table(
+        name = "users",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_users_email", columnNames = "email")
+        },
+        indexes = {
+                @Index(name = "idx_users_role", columnList = "role")
+        }
+)
 public class User {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private String password;
+
+    @Column(nullable = false, length = 120)
     private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
     private UserRole role;
+
+    @Column(length = 30)
     private String phone;
+
+    @Column(nullable = false, length = 180)
     private String email;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+
+    @Column(columnDefinition = "TEXT")
     private String address;
+
+    @Column(name = "notification_token", length = 500)
     private String notificationToken;
+
     private Double latitude;
     private Double longitude;
+
+    @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "store_type", length = 30)
     private StoreType storeType;
 
-    public Long getId() {
-        return id;
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        createdAt = now;
+        updatedAt = now;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public void setRole(UserRole role) {
-        this.role = role;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public String getNotificationToken() {
-        return notificationToken;
-    }
-
-    public void setNotificationToken(String notificationToken) {
-        this.notificationToken = notificationToken;
-    }
-
-    public Double getLatitude() {
-        return latitude;
-    }
-
-    public void setLatitude(Double latitude) {
-        this.latitude = latitude;
-    }
-
-    public Double getLongitude() {
-        return longitude;
-    }
-
-    public void setLongitude(Double longitude) {
-        this.longitude = longitude;
-    }
-
-    public LocalDate getDateOfBirth() {
-        return dateOfBirth;
-    }
-
-    public void setDateOfBirth(LocalDate dateOfBirth) {
-        this.dateOfBirth = dateOfBirth;
-    }
-
-    public StoreType getStoreType() {
-        return storeType;
-    }
-
-    public void setStoreType(StoreType storeType) {
-        this.storeType = storeType;
+    @PreUpdate
+    void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

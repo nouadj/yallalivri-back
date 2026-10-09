@@ -2,16 +2,15 @@ package dz.nadjtech.yallalivri.controller;
 
 import dz.nadjtech.yallalivri.dto.AuthRequest;
 import dz.nadjtech.yallalivri.dto.AuthResponse;
+import dz.nadjtech.yallalivri.dto.NotificationTokenRequest;
 import dz.nadjtech.yallalivri.dto.UserDTO;
+import dz.nadjtech.yallalivri.security.CurrentUser;
+import dz.nadjtech.yallalivri.service.AuthService;
 import dz.nadjtech.yallalivri.service.UserService;
-import dz.nadjtech.yallalivri.service.impl.AuthService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -26,22 +25,21 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public Mono<ResponseEntity<AuthResponse>> login(@RequestBody AuthRequest request) {
-        return authService.login(request)
-                .map(ResponseEntity::ok);
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
+        return ResponseEntity.ok(authService.login(request));
     }
 
     @GetMapping("/me")
-    public Mono<UserDTO> getCurrentUser(@AuthenticationPrincipal Jwt jwt)  {
-        String email = jwt.getClaim("email");
-        return userService.findByEmail(email);
+    public ResponseEntity<UserDTO> getCurrentUser(@AuthenticationPrincipal CurrentUser currentUser) {
+        return ResponseEntity.ok(userService.getUserById(currentUser.id(), currentUser));
     }
 
     @PatchMapping("/users/{id}/notification-token")
-    public Mono<UserDTO> updateNotificationToken(
+    public ResponseEntity<UserDTO> updateNotificationToken(
             @PathVariable Long id,
-            @RequestBody Map<String, String> request) {
-        String token = request.get("notificationToken");
-        return userService.updateNotificationToken(id, token);
+            @Valid @RequestBody NotificationTokenRequest request,
+            @AuthenticationPrincipal CurrentUser currentUser
+    ) {
+        return ResponseEntity.ok(userService.updateNotificationToken(id, request, currentUser));
     }
 }

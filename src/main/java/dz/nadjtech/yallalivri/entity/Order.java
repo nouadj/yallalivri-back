@@ -1,118 +1,77 @@
 package dz.nadjtech.yallalivri.entity;
 
-import dz.nadjtech.yallalivri.dto.OrderStatus;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.relational.core.mapping.Table;
+import dz.nadjtech.yallalivri.enums.OrderStatus;
+import jakarta.persistence.*;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
-import static dz.nadjtech.yallalivri.dto.OrderStatus.CREATED;
-
-@Table("orders")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+@Entity
+@Table(
+        name = "orders",
+        indexes = {
+                @Index(name = "idx_orders_store_id", columnList = "store_id"),
+                @Index(name = "idx_orders_courier_id", columnList = "courier_id"),
+                @Index(name = "idx_orders_status_created_at", columnList = "status, created_at"),
+                @Index(name = "idx_orders_updated_at", columnList = "updated_at")
+        }
+)
 public class Order {
+
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Long storeId;
-    private Long courierId;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "store_id", nullable = false)
+    private User store;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "courier_id")
+    private User courier;
+
+    @Column(name = "customer_name", nullable = false, length = 120)
     private String customerName;
+
+    @Column(name = "customer_phone", nullable = false, length = 30)
     private String customerPhone;
+
+    @Column(name = "customer_address", nullable = false, columnDefinition = "TEXT")
     private String customerAddress;
-    private OrderStatus status;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private OrderStatus status = OrderStatus.CREATED;
+
     private Double amount;
+
+    @Column(name = "delivery_fee")
     private Double deliveryFee;
+
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public Order() {
-        this.status = CREATED;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+    @PrePersist
+    void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (status == null) {
+            status = OrderStatus.CREATED;
+        }
+        createdAt = now;
+        updatedAt = now;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Long getStoreId() {
-        return storeId;
-    }
-
-    public void setStoreId(Long storeId) {
-        this.storeId = storeId;
-    }
-
-    public Long getCourierId() {
-        return courierId;
-    }
-
-    public void setCourierId(Long courierId) {
-        this.courierId = courierId;
-    }
-
-    public String getCustomerName() {
-        return customerName;
-    }
-
-    public void setCustomerName(String customerName) {
-        this.customerName = customerName;
-    }
-
-    public String getCustomerPhone() {
-        return customerPhone;
-    }
-
-    public void setCustomerPhone(String customerPhone) {
-        this.customerPhone = customerPhone;
-    }
-
-    public String getCustomerAddress() {
-        return customerAddress;
-    }
-
-    public void setCustomerAddress(String customerAddress) {
-        this.customerAddress = customerAddress;
-    }
-
-    public OrderStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(OrderStatus status) {
-        this.status = status;
-    }
-
-    public Double getAmount() {
-        return amount;
-    }
-
-    public void setAmount(Double amount) {
-        this.amount = amount;
-    }
-
-    public Double getDeliveryFee() {
-        return deliveryFee;
-    }
-
-    public void setDeliveryFee(Double deliveryFee) {
-        this.deliveryFee = deliveryFee;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
+    @PreUpdate
+    void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }

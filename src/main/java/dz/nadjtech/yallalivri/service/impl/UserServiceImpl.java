@@ -1,215 +1,295 @@
 package dz.nadjtech.yallalivri.service.impl;
 
-import dz.nadjtech.yallalivri.dto.UserDTO;
-import dz.nadjtech.yallalivri.dto.UserDTOWithPassword;
+import dz.nadjtech.yallalivri.dto.*;
 import dz.nadjtech.yallalivri.entity.User;
+import dz.nadjtech.yallalivri.enums.StoreType;
+import dz.nadjtech.yallalivri.enums.UserRole;
 import dz.nadjtech.yallalivri.mapper.UserMapper;
 import dz.nadjtech.yallalivri.repository.UserRepository;
+import dz.nadjtech.yallalivri.security.CurrentUser;
 import dz.nadjtech.yallalivri.service.UserService;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.criteria.Predicate;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 @Service
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final dz.nadjtech.yallalivri.repository.OrderRepository orderRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder, dz.nadjtech.yallalivri.repository.OrderRepository orderRepository) {
         this.userRepository = userRepository;
+        this.orderRepository = orderRepository;
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // CREATE
-    // ─────────────────────────────────────────────────────────────────────────────
     @Override
-    public Mono<UserDTO> createUser(UserDTOWithPassword userDTO) {
+    public List<UserDTO> getAllUsers(CurrentUser currentUser) {
+        assertAdmin(currentUser);
+        return userRepository.findAll().stream().map(userMapper::toDTO).toList();
+    }
+
+    @Override
+    public UserDTO getUserById(Long id, CurrentUser currentUser) {
+        assertAdminOrSelf(id, currentUser);
+        return userMapper.toDTO(getUserOrThrow(id));
+    }
+
+    @Override
+    @Transactional
+    public UserDTO createUser(UserDTOWithPassword userDTO, CurrentUser currentUser) {
+        assertAdmin(currentUser);
+
+        String email = normalizeEmail(userDTO.getEmail());
+        if (userRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+
         User user = userMapper.toEntity(userDTO);
+        user.setEmail(email);
         user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-        return userRepository.save(user)
-                .map(userMapper::toDTO);
-    }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // UPDATE
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Mono<UserDTO> updateUser(Long id, UserDTOWithPassword userDTO) {
-        return userRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("User not found")))
-                .flatMap(existing -> {
-                    existing.setName(userDTO.getName());
-                    existing.setEmail(userDTO.getEmail());
-                    existing.setRole(userDTO.getRole());
-                    existing.setPhone(userDTO.getPhone());
-                    if (userDTO.getPassword() != null && !userDTO.getPassword().isEmpty()) {
-                        existing.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-                    }
-                    return userRepository.save(existing);
-                })
-                .map(userMapper::toDTO);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // GETTERS
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Flux<UserDTO> getAllUsers() {
-        return userRepository.findAll()
-                .map(userMapper::toDTO);
+        validateUser(user);
+        return userMapper.toDTO(userRepository.save(user));
     }
 
     @Override
-    public Mono<UserDTO> getUserById(Long id) {
-        return userRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("User not found")))
-                .map(userMapper::toDTO);
-    }
+    @Transactional
+    public UserDTO updateUser(Long id, UserDTOWithPassword userDTO, CurrentUser currentUser) {
+        assertAdmin(currentUser);
+        User existing = getUserOrThrow(id);
 
-    @Override
-    public Mono<UserDTO> findByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("User not found by email")))
-                .map(userMapper::toDTO);
-    }
-
-    @Override
-    public Mono<UserDTOWithPassword> findByEmailWithPassword(String email) {
-        return userRepository.findByEmail(email)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("User not found by email")))
-                .map(userMapper::toWithPasswordDTO);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // DELETE
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Mono<Void> deleteUser(Long id) {
-        return userRepository.deleteById(id);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // NOTIFICATION TOKEN
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Mono<UserDTO> updateNotificationToken(Long userId, String token) {
-        return userRepository.findById(userId)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("User not found")))
-                .flatMap(user -> {
-                    user.setNotificationToken(token);
-                    return userRepository.save(user);
-                })
-                .map(userMapper::toDTO);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // PATCH (PROFILE UPDATE)
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Mono<Object> patchUser(Long id, Map<String, Object> updates) {
-        return userRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("User not found")))
-                .flatMap(user -> {
-                    updates.forEach((key, value) -> {
-                        switch (key) {
-                            case "email" -> user.setEmail((String) value);
-                            case "phone" -> user.setPhone((String) value);
-                            case "name" -> user.setName((String) value);
-                            case "address" -> user.setAddress((String) value);
-                            // etc. => on peut gérer le storeType, etc.
-                        }
-                    });
-                    return userRepository.save(user);
-                })
-                .map(userMapper::toDTO);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // PATCH PASSWORD (USER)
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Mono<Void> patchUserPassword(Long id, Map<String, Object> updates) {
-        if (!updates.containsKey("oldPassword") || !updates.containsKey("newPassword")) {
-            return Mono.error(new IllegalArgumentException("oldPassword & newPassword required"));
+        String email = normalizeEmail(userDTO.getEmail());
+        if (userRepository.existsByEmailAndIdNot(email, id)) {
+            throw new IllegalArgumentException("Email already exists");
         }
 
-        String oldPassword = (String) updates.get("oldPassword");
-        String newPassword = (String) updates.get("newPassword");
+        existing.setName(userDTO.getName());
+        existing.setEmail(email);
+        assertRoleChangeAllowed(existing, userDTO.getRole());
+        existing.setRole(userDTO.getRole());
+        existing.setPhone(userDTO.getPhone());
+        existing.setAddress(userDTO.getAddress());
+        existing.setNotificationToken(userDTO.getNotificationToken());
+        existing.setLatitude(userDTO.getLatitude());
+        existing.setLongitude(userDTO.getLongitude());
+        existing.setDateOfBirth(userDTO.getDateOfBirth());
+        existing.setStoreType(userDTO.getStoreType());
 
-        return userRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("User not found")))
-                .flatMap(user -> {
-                    if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
-                        return Mono.error(new SecurityException("Old password mismatch"));
-                    }
-                    user.setPassword(passwordEncoder.encode(newPassword));
-                    return userRepository.save(user).then();
-                });
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // PATCH PASSWORD (ADMIN)
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Mono<Void> patchUserPasswordAdmin(Long id, Map<String, Object> updates) {
-        if (!updates.containsKey("newPassword")) {
-            return Mono.error(new IllegalArgumentException("newPassword is required"));
+        if (StringUtils.hasText(userDTO.getPassword())) {
+            existing.setPassword(passwordEncoder.encode(userDTO.getPassword()));
         }
 
-        String newPassword = (String) updates.get("newPassword");
-        return userRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("User not found")))
-                .flatMap(user -> {
-                    user.setPassword(passwordEncoder.encode(newPassword));
-                    return userRepository.save(user).then();
-                });
+        validateUser(existing);
+        return userMapper.toDTO(existing);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // LOCATION
-    // ─────────────────────────────────────────────────────────────────────────────
     @Override
-    public Mono<UserDTO> updateUserLocation(Long id, Double latitude, Double longitude) {
-        return userRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("User not found")))
-                .flatMap(user -> {
-                    user.setLatitude(latitude);
-                    user.setLongitude(longitude);
-                    return userRepository.save(user);
-                })
-                .map(userMapper::toDTO);
+    @Transactional
+    public UserDTO patchUser(Long id, Map<String, Object> updates, CurrentUser currentUser) {
+        assertAdminOrSelf(id, currentUser);
+        User user = getUserOrThrow(id);
+
+        updates.forEach((key, value) -> {
+            if (value == null) {
+                switch (key) {
+                    case "storeType" -> user.setStoreType(null);
+                    case "dateOfBirth" -> user.setDateOfBirth(null);
+                    case "latitude" -> user.setLatitude(null);
+                    case "longitude" -> user.setLongitude(null);
+                    default -> throw new IllegalArgumentException("Unsupported null field: " + key);
+                }
+                return;
+            }
+
+            switch (key) {
+                case "email" -> {
+                    String email = normalizeEmail(value.toString());
+                    if (userRepository.existsByEmailAndIdNot(email, id)) {
+                        throw new IllegalArgumentException("Email already exists");
+                    }
+                    user.setEmail(email);
+                }
+                case "phone" -> user.setPhone(value.toString());
+                case "name" -> user.setName(value.toString());
+                case "address" -> user.setAddress(value.toString());
+                case "notificationToken" -> user.setNotificationToken(value.toString());
+                case "latitude" -> user.setLatitude(asDouble(value));
+                case "longitude" -> user.setLongitude(asDouble(value));
+                case "dateOfBirth" -> user.setDateOfBirth(LocalDate.parse(value.toString()));
+                case "storeType" -> user.setStoreType(StoreType.valueOf(value.toString().toUpperCase(Locale.ROOT)));
+                case "role" -> {
+                    assertAdmin(currentUser);
+                    UserRole newRole = UserRole.valueOf(value.toString().toUpperCase(Locale.ROOT));
+                    assertRoleChangeAllowed(user, newRole);
+                    user.setRole(newRole);
+                }
+                default -> throw new IllegalArgumentException("Unsupported field: " + key);
+            }
+        });
+
+        validateUser(user);
+        return userMapper.toDTO(user);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // SEARCH
-    // ─────────────────────────────────────────────────────────────────────────────
     @Override
-    public Flux<UserDTO> searchUsers(Map<String, String> filters) {
-        return userRepository.findAll()
-                .filter(u -> matchesFilter(u, filters))
-                .map(userMapper::toDTO);
+    @Transactional
+    public void patchUserPassword(Long id, PasswordUpdateRequest request, CurrentUser currentUser) {
+        assertAdminOrSelf(id, currentUser);
+        User user = getUserOrThrow(id);
+
+        if (!currentUser.isAdmin() && !passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new AccessDeniedException("Old password mismatch");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
     }
 
-    private boolean matchesFilter(User user, Map<String, String> filters) {
-        // ex: name, email, role, phone, address
-        String nameFilter  = filters.getOrDefault("name", "");
-        String emailFilter = filters.getOrDefault("email", "");
-        String roleFilter  = filters.getOrDefault("role", "");
-        String phoneFilter = filters.getOrDefault("phone", "");
-        String addrFilter  = filters.getOrDefault("address", "");
+    @Override
+    @Transactional
+    public void patchUserPasswordAdmin(Long id, AdminPasswordUpdateRequest request, CurrentUser currentUser) {
+        assertAdmin(currentUser);
+        User user = getUserOrThrow(id);
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+    }
 
-        return (nameFilter.isEmpty()  || user.getName().toLowerCase().contains(nameFilter.toLowerCase()))
-                && (emailFilter.isEmpty() || user.getEmail().toLowerCase().contains(emailFilter.toLowerCase()))
-                && (roleFilter.isEmpty()  || user.getRole().name().equalsIgnoreCase(roleFilter))
-                && (phoneFilter.isEmpty() || (user.getPhone() != null && user.getPhone().contains(phoneFilter)))
-                && (addrFilter.isEmpty()  || (user.getAddress() != null && user.getAddress().toLowerCase().contains(addrFilter.toLowerCase())));
+    @Override
+    @Transactional
+    public void deleteUser(Long id, CurrentUser currentUser) {
+        assertAdminOrSelf(id, currentUser);
+        User user = getUserOrThrow(id);
+        if (orderRepository.existsByStore_IdOrCourier_Id(id, id)) {
+            throw new IllegalStateException("Cet utilisateur possède des commandes : conservez son compte pour préserver l’historique.");
+        }
+        userRepository.delete(user);
+    }
+
+    @Override
+    public UserDTO findByEmail(String email, CurrentUser currentUser) {
+        assertAdmin(currentUser);
+        return userRepository.findByEmail(normalizeEmail(email))
+                .map(userMapper::toDTO)
+                .orElseThrow(() -> new EntityNotFoundException("User not found by email"));
+    }
+
+    @Override
+    @Transactional
+    public UserDTO updateNotificationToken(Long id, NotificationTokenRequest request, CurrentUser currentUser) {
+        assertAdminOrSelf(id, currentUser);
+        User user = getUserOrThrow(id);
+        user.setNotificationToken(request.getNotificationToken());
+        return userMapper.toDTO(user);
+    }
+
+    @Override
+    @Transactional
+    public UserDTO updateUserLocation(Long id, LocationUpdateRequest request, CurrentUser currentUser) {
+        assertAdminOrSelf(id, currentUser);
+        User user = getUserOrThrow(id);
+        user.setLatitude(request.getLatitude());
+        user.setLongitude(request.getLongitude());
+        return userMapper.toDTO(user);
+    }
+
+    @Override
+    public List<UserDTO> searchUsers(Map<String, String> filters, CurrentUser currentUser) {
+        assertAdmin(currentUser);
+
+        return userRepository.findAll((root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            String name = filters.get("name");
+            if (StringUtils.hasText(name)) {
+                predicates.add(cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase(Locale.ROOT) + "%"));
+            }
+
+            String email = filters.get("email");
+            if (StringUtils.hasText(email)) {
+                predicates.add(cb.like(cb.lower(root.get("email")), "%" + email.toLowerCase(Locale.ROOT) + "%"));
+            }
+
+            String role = filters.get("role");
+            if (StringUtils.hasText(role)) {
+                predicates.add(cb.equal(root.get("role"), UserRole.valueOf(role.toUpperCase(Locale.ROOT))));
+            }
+
+            String phone = filters.get("phone");
+            if (StringUtils.hasText(phone)) {
+                predicates.add(cb.like(root.get("phone"), "%" + phone + "%"));
+            }
+
+            String address = filters.get("address");
+            if (StringUtils.hasText(address)) {
+                predicates.add(cb.like(cb.lower(root.get("address")), "%" + address.toLowerCase(Locale.ROOT) + "%"));
+            }
+
+            return cb.and(predicates.toArray(Predicate[]::new));
+        }).stream().map(userMapper::toDTO).toList();
+    }
+
+    private void assertRoleChangeAllowed(User user, UserRole role) {
+        if (user.getRole() != role && orderRepository.existsByStore_IdOrCourier_Id(user.getId(), user.getId()))
+            throw new IllegalStateException("Impossible de changer le rôle d’un utilisateur lié à des commandes.");
+    }
+
+    private void validateUser(User user) {
+        if (user.getName() == null || user.getName().isBlank() || user.getName().length() > 120)
+            throw new IllegalArgumentException("Name is required (max 120 characters)");
+        if (user.getEmail() == null || user.getEmail().length() > 180 || !user.getEmail().matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"))
+            throw new IllegalArgumentException("Invalid email");
+        if (user.getLatitude() != null && (!Double.isFinite(user.getLatitude()) || Math.abs(user.getLatitude()) > 90))
+            throw new IllegalArgumentException("Invalid latitude");
+        if (user.getLongitude() != null && (!Double.isFinite(user.getLongitude()) || Math.abs(user.getLongitude()) > 180))
+            throw new IllegalArgumentException("Invalid longitude");
+        if ((user.getLatitude() == null) != (user.getLongitude() == null))
+            throw new IllegalArgumentException("Provide both latitude and longitude");
+        if (user.getPhone() != null && user.getPhone().length() > 30) throw new IllegalArgumentException("Phone too long");
+        if (user.getDateOfBirth() != null && user.getDateOfBirth().isAfter(LocalDate.now())) throw new IllegalArgumentException("Birth date must be in the past");
+        if (user.getRole() != UserRole.STORE) user.setStoreType(null);
+    }
+
+    private User getUserOrThrow(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+    }
+
+    private void assertAdmin(CurrentUser currentUser) {
+        if (currentUser == null || !currentUser.isAdmin()) {
+            throw new AccessDeniedException("Admin access required");
+        }
+    }
+
+    private void assertAdminOrSelf(Long userId, CurrentUser currentUser) {
+        if (currentUser == null || (!currentUser.isAdmin() && !userId.equals(currentUser.id()))) {
+            throw new AccessDeniedException("Unauthorized");
+        }
+    }
+
+    private String normalizeEmail(String email) {
+        if (!StringUtils.hasText(email)) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private Double asDouble(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        return Double.valueOf(value.toString());
     }
 }

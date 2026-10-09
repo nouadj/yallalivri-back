@@ -1,369 +1,387 @@
 package dz.nadjtech.yallalivri.service.impl;
 
-import dz.nadjtech.yallalivri.dto.*;
+import dz.nadjtech.yallalivri.dto.OrderDTO;
+import dz.nadjtech.yallalivri.dto.OrderDisplayDTO;
 import dz.nadjtech.yallalivri.entity.Order;
 import dz.nadjtech.yallalivri.entity.User;
+import dz.nadjtech.yallalivri.enums.OrderStatus;
+import dz.nadjtech.yallalivri.enums.UserRole;
 import dz.nadjtech.yallalivri.mapper.OrderMapper;
 import dz.nadjtech.yallalivri.repository.OrderRepository;
 import dz.nadjtech.yallalivri.repository.UserRepository;
+import dz.nadjtech.yallalivri.security.CurrentUser;
+import dz.nadjtech.yallalivri.service.NotificationService;
 import dz.nadjtech.yallalivri.service.OrderService;
-import org.springframework.data.geo.Point;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.server.ResponseStatusException;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
-import java.util.NoSuchElementException;
 
 @Service
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
+    private final OrderMapper orderMapper;
+    private final NotificationService notificationService;
 
-    public OrderServiceImpl(OrderRepository orderRepository, UserRepository userRepository) {
+    public OrderServiceImpl(
+            OrderRepository orderRepository,
+            UserRepository userRepository,
+            OrderMapper orderMapper,
+            NotificationService notificationService
+    ) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // GETTERS
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Flux<OrderDTO> getAllOrders() {
-        return orderRepository.findAll()
-                .map(OrderMapper::toDTO);
+        this.orderMapper = orderMapper;
+        this.notificationService = notificationService;
     }
 
     @Override
-    public Mono<OrderDTO> getOrderById(Long id) {
-        return orderRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("Order not found")))
-                .map(OrderMapper::toDTO);
+    @Transactional(readOnly = true)
+    public List<OrderDTO> getAllOrders(CurrentUser currentUser) {
+        assertAdmin(currentUser);
+        return orderRepository.findAllDetailed().stream().map(orderMapper::toDTO).toList();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // CREATE
-    // ─────────────────────────────────────────────────────────────────────────────
     @Override
-    public Mono<OrderDTO> createOrder(OrderDTO orderDTO) {
-        // On peut vérifier la validité du Store ici, par ex.:
-        return userRepository.findById(orderDTO.getStoreId())
-                .switchIfEmpty(Mono.error(new NoSuchElementException("Store not found")))
-                .flatMap(store -> {
-                    Order entity = OrderMapper.toEntity(orderDTO);
-                    entity.setCreatedAt(LocalDateTime.now());
-                    entity.setUpdatedAt(LocalDateTime.now());
-                    return orderRepository.save(entity);
-                })
-                .map(OrderMapper::toDTO)
-                .doOnSuccess(this::notifyCouriers); // notifie en asynchrone
+    @Transactional(readOnly = true)
+    public OrderDTO getOrderById(Long id, CurrentUser currentUser) {
+        Order order = getOrderOrThrow(id);
+        assertCanReadOrder(order, currentUser);
+        return orderMapper.toDTO(order);
     }
 
-    /**
-     * Notifie les coursiers à proximité si le store a des coordonnées.
-     */
-    private void notifyCouriers(OrderDTO order) {
-        userRepository.findById(order.getStoreId())
-                .flatMapMany(store -> {
-                    if (store.getLatitude() == null || store.getLongitude() == null) {
-                        return Flux.empty(); // pas de notif possible
-                    }
-                    final double maxDistanceKm = 20.0;
-                    final Point storeLocation = new Point(store.getLatitude(), store.getLongitude());
-
-                    return userRepository.findAllByRole(UserRole.COURIER)
-                            .filter(c -> c.getNotificationToken() != null && c.getLatitude() != null && c.getLongitude() != null)
-                            .filter(c -> {
-                                Point courierLoc = new Point(c.getLatitude(), c.getLongitude());
-                                double distance = calculateDistance(storeLocation, courierLoc);
-                                return distance <= maxDistanceKm;
-                            })
-                            .doOnNext(courier -> sendPushNotificationToCourier(courier.getNotificationToken(), store.getName(), order));
-                })
-                .subscribe(); // On déclenche l'exécution (asynchrone)
-    }
-
-    private double calculateDistance(Point p1, Point p2) {
-        double earthRadius = 6371.0; // km
-        double latDiff = Math.toRadians(p2.getX() - p1.getX());
-        double lonDiff = Math.toRadians(p2.getY() - p1.getY());
-        double a = Math.sin(latDiff/2) * Math.sin(latDiff/2)
-                + Math.cos(Math.toRadians(p1.getX())) * Math.cos(Math.toRadians(p2.getX()))
-                * Math.sin(lonDiff/2) * Math.sin(lonDiff/2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return earthRadius * c;
-    }
-
-    private void sendPushNotificationToCourier(String expoToken, String storeName, OrderDTO order) {
-        // Ex : WebClient pour Expo
-        WebClient.create("https://exp.host")
-                .post()
-                .uri("/--/api/v2/push/send")
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .bodyValue(Map.of(
-                        "to", expoToken,
-                        "title", storeName + " 📦 Nouvelle commande dispo !",
-                        "body", "Commande de " + order.getCustomerName(),
-                        "data", Map.of("orderId", order.getId())
-                ))
-                .retrieve()
-                .bodyToMono(String.class)
-                .subscribe(response -> System.out.println("✅ Notification envoyée : " + response),
-                        err -> System.err.println("❌ Erreur notif : " + err.getMessage()));
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // UPDATE
-    // ─────────────────────────────────────────────────────────────────────────────
     @Override
-    public Mono<OrderDTO> updateOrder(Long id, OrderDTO orderDTO) {
-        return orderRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("Order not found")))
-                .flatMap(existing -> {
-                    existing.setStoreId(orderDTO.getStoreId());
-                    existing.setCourierId(orderDTO.getCourierId());
-                    existing.setCustomerName(orderDTO.getCustomerName());
-                    existing.setCustomerPhone(orderDTO.getCustomerPhone());
-                    existing.setCustomerAddress(orderDTO.getCustomerAddress());
-                    existing.setStatus(orderDTO.getStatus());
-                    existing.setAmount(orderDTO.getAmount());
-                    existing.setDeliveryFee(orderDTO.getDeliveryFee());
-                    existing.setUpdatedAt(LocalDateTime.now());
-                    return orderRepository.save(existing);
-                })
-                .map(OrderMapper::toDTO);
+    @Transactional
+    public OrderDTO createOrder(OrderDTO orderDTO, CurrentUser currentUser) {
+        if (currentUser.role() != UserRole.ADMIN && currentUser.role() != UserRole.STORE) {
+            throw new AccessDeniedException("Only ADMIN or STORE can create orders");
+        }
+
+        User store = userRepository.findById(orderDTO.getStoreId())
+                .orElseThrow(() -> new EntityNotFoundException("Store not found"));
+
+        if (store.getRole() != UserRole.STORE) {
+            throw new IllegalArgumentException("Selected user is not a store");
+        }
+
+        if (currentUser.role() == UserRole.STORE && !store.getId().equals(currentUser.id())) {
+            throw new AccessDeniedException("Store can create only its own orders");
+        }
+
+        Order order = Order.builder()
+                .store(store)
+                .customerName(orderDTO.getCustomerName())
+                .customerPhone(orderDTO.getCustomerPhone())
+                .customerAddress(orderDTO.getCustomerAddress())
+                .amount(orderDTO.getAmount())
+                .deliveryFee(orderDTO.getDeliveryFee())
+                .status(OrderStatus.CREATED)
+                .build();
+
+        Order saved = orderRepository.save(order);
+        notificationService.notifyCouriersForNewOrder(saved.getId());
+        return orderMapper.toDTO(saved);
     }
 
-    /**
-     * Notifie le store d’un événement (commande assignée, livrée, etc.)
-     */
-    private void notifyStore(OrderDTO order, String message) {
-        userRepository.findById(order.getStoreId())
-                .flatMap(store -> {
-                    if (store.getNotificationToken() == null) {
-                        // Pas de token => pas de notif
-                        return Mono.empty();
-                    }
-                    // Envoie la notification
-                    return sendPushNotificationStore(
-                            store.getNotificationToken(),
-                            "Commande " + order.getId() + " " + message,
-                            "La commande pour " + order.getCustomerName() + " est " + message + ".",
-                            order.getId()
+    @Override
+    @Transactional
+    public OrderDTO updateOrder(Long id, OrderDTO orderDTO, CurrentUser currentUser) {
+        Order order = orderRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found"));
+
+        if (!currentUser.isAdmin() && !Objects.equals(order.getStore().getId(), currentUser.id())) {
+            throw new AccessDeniedException("Only ADMIN or owner STORE can update an order");
+        }
+
+        if (!currentUser.isAdmin() && order.getStatus() != OrderStatus.CREATED) {
+            throw new IllegalStateException("Store can update only CREATED orders");
+        }
+
+        order.setCustomerName(orderDTO.getCustomerName());
+        order.setCustomerPhone(orderDTO.getCustomerPhone());
+        order.setCustomerAddress(orderDTO.getCustomerAddress());
+        order.setAmount(orderDTO.getAmount());
+        order.setDeliveryFee(orderDTO.getDeliveryFee());
+
+        return orderMapper.toDTO(order);
+    }
+
+    @Override
+    @Transactional
+    public OrderDTO updateOrderStatus(Long id, OrderStatus newOrderStatus, CurrentUser currentUser) {
+        Order order = orderRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found"));
+
+        if (!currentUser.isAdmin()) {
+            if (currentUser.role() == UserRole.COURIER) {
+                if (order.getCourier() == null || !Objects.equals(order.getCourier().getId(), currentUser.id())) {
+                    throw new AccessDeniedException("Courier can update only his assigned orders");
+                }
+            } else if (currentUser.role() == UserRole.STORE) {
+                boolean isOwnerStore = Objects.equals(order.getStore().getId(), currentUser.id());
+                boolean canCancelCreatedOrder = isOwnerStore
+                        && order.getStatus() == OrderStatus.CREATED
+                        && newOrderStatus == OrderStatus.CANCELLED;
+                if (!canCancelCreatedOrder) {
+                    throw new AccessDeniedException("Store can only cancel its CREATED orders");
+                }
+            } else {
+                throw new AccessDeniedException("Unauthorized");
+            }
+        }
+
+        if (newOrderStatus == OrderStatus.ASSIGNED) {
+            throw new IllegalArgumentException("Use the assign endpoint to select a courier");
+        }
+
+        if (!isValidTransition(order.getStatus(), newOrderStatus)) {
+            throw new IllegalArgumentException("Invalid status transition");
+        }
+
+        order.setStatus(newOrderStatus);
+
+        if (newOrderStatus == OrderStatus.DELIVERED) {
+            notificationService.notifyStore(order.getId(), "livrée");
+        } else if (newOrderStatus == OrderStatus.RETURNED) {
+            notificationService.notifyStore(order.getId(), "retournée");
+        } else if (newOrderStatus == OrderStatus.SHIPPED) {
+            notificationService.notifyStore(order.getId(), "en cours de livraison");
+        } else if (newOrderStatus == OrderStatus.CANCELLED) {
+            notificationService.notifyStore(order.getId(), "annulée");
+        }
+
+        return orderMapper.toDTO(order);
+    }
+
+    @Override
+    @Transactional
+    public void deleteOrder(Long id, CurrentUser currentUser) {
+        Order order = orderRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found"));
+
+        if (!currentUser.isAdmin() && !Objects.equals(order.getStore().getId(), currentUser.id())) {
+            throw new AccessDeniedException("Only ADMIN or owner STORE can delete an order");
+        }
+
+        if (!currentUser.isAdmin()
+                && order.getStatus() != OrderStatus.CREATED
+                && order.getStatus() != OrderStatus.RETURNED
+                && order.getStatus() != OrderStatus.CANCELLED) {
+            throw new AccessDeniedException("Store cannot delete this order status");
+        }
+
+        orderRepository.delete(order);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderDisplayDTO> getAllOrderByCourierId(Long courierId, String status, CurrentUser currentUser) {
+        if (!currentUser.isAdmin() && !courierId.equals(currentUser.id())) {
+            throw new AccessDeniedException("Unauthorized");
+        }
+
+        if (status != null && !status.isBlank()) {
+            OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase(Locale.ROOT));
+            return orderRepository.findByCourier_IdAndStatusOrderByUpdatedAtDesc(courierId, orderStatus)
+                    .stream()
+                    .map(orderMapper::toDisplayDTO)
+                    .toList();
+        }
+
+        return orderRepository.findByCourier_IdOrderByUpdatedAtDesc(courierId)
+                .stream()
+                .map(orderMapper::toDisplayDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderDisplayDTO> getAllOrderByStoreId(Long storeId, Integer hours, CurrentUser currentUser) {
+        if (!currentUser.isAdmin() && !storeId.equals(currentUser.id())) {
+            throw new AccessDeniedException("Unauthorized");
+        }
+
+        if (hours != null && hours <= 0) throw new IllegalArgumentException("Hours must be positive");
+        if (hours != null) {
+            LocalDateTime since = LocalDateTime.now().minusHours(hours);
+            return orderRepository.findByStore_IdAndCreatedAtAfterOrderByUpdatedAtDesc(storeId, since)
+                    .stream()
+                    .map(orderMapper::toDisplayDTO)
+                    .toList();
+        }
+
+        return orderRepository.findByStore_IdOrderByUpdatedAtDesc(storeId)
+                .stream()
+                .map(orderMapper::toDisplayDTO)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrderDisplayDTO> getOrdersByStatusSinceWithDistance(
+            OrderStatus status,
+            LocalDateTime since,
+            Integer distance,
+            Long courierId,
+            CurrentUser currentUser
+    ) {
+        if (courierId == null) {
+            throw new IllegalArgumentException("courierId is required");
+        }
+        if (!currentUser.isAdmin() && !courierId.equals(currentUser.id())) {
+            throw new AccessDeniedException("Unauthorized");
+        }
+
+        User courier = userRepository.findById(courierId)
+                .orElseThrow(() -> new EntityNotFoundException("Courier not found"));
+
+        if (courier.getRole() != UserRole.COURIER) {
+            throw new IllegalArgumentException("User is not a courier");
+        }
+
+        if (courier.getLatitude() == null || courier.getLongitude() == null) {
+            return List.of();
+        }
+
+        if (!currentUser.isAdmin() && status != OrderStatus.CREATED) {
+            throw new AccessDeniedException("Only available orders can be browsed");
+        }
+        int maxDistanceKm = distance == null ? 20 : distance;
+        if (maxDistanceKm <= 0) throw new IllegalArgumentException("Distance must be positive");
+
+        return orderRepository.findByStatusAndCreatedAtAfterOrderByUpdatedAtDesc(status, since)
+                .stream()
+                .filter(order -> order.getStore().getLatitude() != null && order.getStore().getLongitude() != null)
+                .filter(order -> {
+                    double calculatedDistance = calculateDistanceKm(
+                            courier.getLatitude(),
+                            courier.getLongitude(),
+                            order.getStore().getLatitude(),
+                            order.getStore().getLongitude()
                     );
+                    return calculatedDistance <= maxDistanceKm;
                 })
-                .subscribe(); // On déclenche l'appel asynchrone
+                .map(orderMapper::toDisplayDTO)
+                .toList();
     }
-    /**
-     * Envoie réellement la notif push via Expo
-     */
-    private Mono<Void> sendPushNotificationStore(String expoToken, String title, String body, Long orderId) {
-        return WebClient.create("https://exp.host")
-                .post()
-                .uri("/--/api/v2/push/send")
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .bodyValue(Map.of(
-                        "to", expoToken,
-                        "title", title,
-                        "body", body,
-                        "data", Map.of("orderId", orderId)
-                ))
-                .retrieve()
-                .bodyToMono(String.class)
-                // On retourne Mono<Void> après la réponse
-                .then();
-    }
-
 
     @Override
-    public Mono<OrderDTO> updateOrderStatus(Long id, OrderStatus newStatus) {
-        return orderRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("Order not found")))
-                .flatMap(existingOrder -> {
-                    if (!isValidTransition(existingOrder.getStatus(), newStatus)) {
-                        return Mono.error(new IllegalArgumentException("Invalid status transition"));
-                    }
-                    existingOrder.setStatus(newStatus);
-                    existingOrder.setUpdatedAt(LocalDateTime.now());
-                    return orderRepository.save(existingOrder);
-                })
-                .map(OrderMapper::toDTO)
-                // 🔥 Notifier le store si c'est DELIVERED ou RETURNED
-                .doOnSuccess(orderDto -> {
-                    if (newStatus == OrderStatus.DELIVERED) {
-                        notifyStore(orderDto, "livrée");
-                    } else if (newStatus == OrderStatus.RETURNED) {
-                        notifyStore(orderDto, "retournée");
-                    }
-                });
+    @Transactional
+    public OrderDTO assignOrderToCourier(Long id, Long courierId, CurrentUser currentUser) {
+        if (currentUser.role() != UserRole.ADMIN && currentUser.role() != UserRole.COURIER) {
+            throw new AccessDeniedException("Only ADMIN or COURIER can assign orders");
+        }
+
+        if (currentUser.role() == UserRole.COURIER && !courierId.equals(currentUser.id())) {
+            throw new AccessDeniedException("Courier can assign only to himself");
+        }
+
+        Order order = orderRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found"));
+
+        if (order.getCourier() != null) {
+            throw new IllegalStateException("Order already assigned");
+        }
+
+        if (order.getStatus() != OrderStatus.CREATED) {
+            throw new IllegalStateException("Only CREATED orders can be assigned");
+        }
+
+        User courier = userRepository.findById(courierId)
+                .orElseThrow(() -> new EntityNotFoundException("Courier not found"));
+
+        if (courier.getRole() != UserRole.COURIER) {
+            throw new IllegalArgumentException("Selected user is not a courier");
+        }
+
+        order.setCourier(courier);
+        order.setStatus(OrderStatus.ASSIGNED);
+        notificationService.notifyStore(order.getId(), "assignée à un livreur");
+
+        return orderMapper.toDTO(order);
     }
 
+    @Override
+    @Transactional
+    public OrderDTO unassignOrderToCourier(Long id, CurrentUser currentUser) {
+        Order order = orderRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found"));
+
+        if (!currentUser.isAdmin()) {
+            boolean isAssignedCourier = currentUser.role() == UserRole.COURIER
+                    && order.getCourier() != null
+                    && Objects.equals(order.getCourier().getId(), currentUser.id());
+            boolean isOwnerStore = currentUser.role() == UserRole.STORE
+                    && Objects.equals(order.getStore().getId(), currentUser.id());
+
+            if (!isAssignedCourier && !isOwnerStore) {
+                throw new AccessDeniedException("Unauthorized");
+            }
+        }
+
+        if (order.getStatus() != OrderStatus.ASSIGNED) {
+            throw new IllegalStateException("Only ASSIGNED orders can be unassigned");
+        }
+
+        order.setCourier(null);
+        order.setStatus(OrderStatus.CREATED);
+        return orderMapper.toDTO(order);
+    }
+
+    private Order getOrderOrThrow(Long id) {
+        return orderRepository.findDetailedById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found"));
+    }
+
+    private void assertAdmin(CurrentUser currentUser) {
+        if (currentUser == null || !currentUser.isAdmin()) {
+            throw new AccessDeniedException("Admin access required");
+        }
+    }
+
+    private void assertCanReadOrder(Order order, CurrentUser currentUser) {
+        if (currentUser.isAdmin()) return;
+
+        boolean isStoreOwner = currentUser.role() == UserRole.STORE
+                && Objects.equals(order.getStore().getId(), currentUser.id());
+        boolean isAssignedCourier = currentUser.role() == UserRole.COURIER
+                && order.getCourier() != null
+                && Objects.equals(order.getCourier().getId(), currentUser.id());
+
+        if (!isStoreOwner && !isAssignedCourier) {
+            throw new AccessDeniedException("Unauthorized");
+        }
+    }
 
     private boolean isValidTransition(OrderStatus oldStatus, OrderStatus newStatus) {
         return switch (oldStatus) {
-            case CREATED -> (newStatus == OrderStatus.ASSIGNED || newStatus == OrderStatus.CANCELLED);
-            case ASSIGNED -> (newStatus == OrderStatus.RETURNED || newStatus == OrderStatus.DELIVERED);
-            default -> false;
+            case CREATED -> newStatus == OrderStatus.ASSIGNED || newStatus == OrderStatus.CANCELLED;
+            case ASSIGNED -> newStatus == OrderStatus.SHIPPED
+                    || newStatus == OrderStatus.RETURNED
+                    || newStatus == OrderStatus.CANCELLED;
+            case SHIPPED -> newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.RETURNED;
+            case CANCELLED, RETURNED, DELIVERED -> false;
         };
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // DELETE
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Mono<Void> deleteOrder(Long id, UserRole role, Long userId) {
-        if (role == UserRole.ADMIN) {
-            return orderRepository.deleteById(id);
-        }
-        return orderRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("Order not found")))
-                .flatMap(order -> {
-                    // Seul le store ayant créé la commande peut la supprimer
-                    if (!Objects.equals(order.getStoreId(), userId)) {
-                        return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN, "Permission denied"));
-                    }
-                    // Si CREATED ou RETURNED -> peut supprimer
-                    if (order.getStatus() == OrderStatus.CREATED || order.getStatus() == OrderStatus.RETURNED) {
-                        return orderRepository.delete(order);
-                    } else {
-                        return Mono.error(new ResponseStatusException(HttpStatus.FORBIDDEN, "Can't delete this order"));
-                    }
-                });
-    }
+    private double calculateDistanceKm(double lat1, double lon1, double lat2, double lon2) {
+        double earthRadiusKm = 6371.0;
+        double latDiff = Math.toRadians(lat2 - lat1);
+        double lonDiff = Math.toRadians(lon2 - lon1);
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // FIND BY COURIER / STORE
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Flux<OrderDisplayDTO> getAllOrderByCourierId(Long courierId) {
-        return orderRepository.findByCourierIdOrderByUpdatedAtDesc(courierId)
-                .flatMap(this::enrichOrder);
-    }
+        double a = Math.sin(latDiff / 2) * Math.sin(latDiff / 2)
+                + Math.cos(Math.toRadians(lat1))
+                * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDiff / 2) * Math.sin(lonDiff / 2);
 
-    @Override
-    public Flux<OrderDisplayDTO> getAllOrderByStoreId(Long storeId) {
-        return orderRepository.findByStoreIdOrderByUpdatedAtDesc(storeId)
-                .flatMap(this::enrichOrder);
-    }
-
-    @Override
-    public Flux<OrderDisplayDTO> getRecentOrdersByStoreId(Long storeId, LocalDateTime since) {
-        return orderRepository.findByStoreIdAndCreatedAtAfterOrderByUpdatedAtDesc(storeId, since)
-                .flatMap(this::enrichOrder);
-    }
-
-    @Override
-    public Flux<OrderDisplayDTO> getOrdersByCourierAndStatus(Long courierId, OrderStatus orderStatus) {
-        return orderRepository.findByCourierIdAndStatus(courierId, orderStatus)
-                .flatMap(this::enrichOrder);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // RECHERCHE PAR STATUS + DISTANCE + SINCE
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Flux<OrderDisplayDTO> getOrdersByStatusSinceWithDistance(String status, LocalDateTime since, Integer maxDistanceKm, Long courierId) {
-        return userRepository.findById(courierId)
-                .flatMapMany(courier -> {
-                    if (courier.getLatitude() == null || courier.getLongitude() == null) {
-                        return Flux.empty(); // pas de position => pas de résultats
-                    }
-                    final Point courierLoc = new Point(courier.getLatitude(), courier.getLongitude());
-                    return orderRepository.findByStatusAndCreatedAtAfterOrderByUpdatedAtDesc(status, since)
-                            .flatMap(order ->
-                                    userRepository.findById(order.getStoreId())
-                                            .flatMap(store -> {
-                                                if (store.getLatitude() == null || store.getLongitude() == null) {
-                                                    return Mono.empty();
-                                                }
-                                                double dist = calculateDistance(
-                                                        new Point(store.getLatitude(), store.getLongitude()),
-                                                        courierLoc
-                                                );
-                                                return dist <= maxDistanceKm ? enrichOrder(order) : Mono.empty();
-                                            })
-                            );
-                });
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // ASSIGN / UNASSIGN
-    // ─────────────────────────────────────────────────────────────────────────────
-    @Override
-    public Mono<OrderDTO> assignOrderToCourier(Long id, Map<String, Object> updates) {
-        return orderRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("Order not found")))
-                .flatMap(order -> {
-                    if (order.getCourierId() != null) {
-                        return Mono.error(new IllegalStateException("Commande déjà assignée"));
-                    }
-                    if (updates.containsKey("courierId")) {
-                        order.setCourierId(Long.valueOf(updates.get("courierId").toString()));
-                    }
-                    if (updates.containsKey("status")) {
-                        order.setStatus(OrderStatus.valueOf(updates.get("status").toString()));
-                    }
-                    order.setUpdatedAt(LocalDateTime.now());
-                    return orderRepository.save(order);
-                })
-                .map(OrderMapper::toDTO)
-                // 🔥 Notifier le store que la commande est "assignée"
-                .doOnSuccess(orderDto -> {
-                    if (orderDto.getStatus() == OrderStatus.ASSIGNED) {
-                        notifyStore(orderDto, "assignée à un livreur");
-                    }
-                });
-    }
-
-
-    @Override
-    public Mono<OrderDTO> unassignOrderToCourier(Long id) {
-        return orderRepository.findById(id)
-                .switchIfEmpty(Mono.error(new NoSuchElementException("Order not found")))
-                .flatMap(existingOrder -> {
-                    if (existingOrder.getStatus() == OrderStatus.ASSIGNED) {
-                        existingOrder.setCourierId(null);
-                        existingOrder.setUpdatedAt(LocalDateTime.now());
-                        return orderRepository.save(existingOrder);
-                    } else {
-                        return Mono.error(new IllegalArgumentException("Cannot unassign an order not in ASSIGNED status"));
-                    }
-                })
-                .map(OrderMapper::toDTO);
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // ENRICH ORDER
-    // ─────────────────────────────────────────────────────────────────────────────
-    private Mono<OrderDisplayDTO> enrichOrder(Order order) {
-        Mono<User> storeMono = userRepository.findById(order.getStoreId())
-                .switchIfEmpty(Mono.error(new NoSuchElementException("Store not found for order " + order.getId())));
-
-        Mono<User> courierMono;
-        if (order.getCourierId() != null) {
-            courierMono = userRepository.findById(order.getCourierId())
-                    .defaultIfEmpty(new User());
-        } else {
-            courierMono = Mono.just(new User());
-        }
-
-        return storeMono.zipWith(courierMono)
-                .map(tuple -> {
-                    User storeUser = tuple.getT1();
-                    User courierUser = tuple.getT2();
-                    String storeName = storeUser.getName();
-                    String storeAddress = storeUser.getAddress();
-                    String courierName = courierUser.getName() == null ? "" : courierUser.getName();
-                    return OrderMapper.toDisplayDTO(order, storeName, storeAddress, courierName);
-                });
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadiusKm * c;
     }
 }

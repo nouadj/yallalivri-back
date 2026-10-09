@@ -1,38 +1,55 @@
 package dz.nadjtech.yallalivri.security;
 
-
-import org.springframework.http.HttpHeaders;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebFilter;
-import org.springframework.web.server.WebFilterChain;
-import reactor.core.publisher.Mono;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.io.IOException;
 import java.util.List;
 
 @Component
-public class JwtAuthenticationFilter implements WebFilter {
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final dz.nadjtech.yallalivri.repository.UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, dz.nadjtech.yallalivri.repository.UserRepository userRepository) {
         this.jwtUtil = jwtUtil;
+        this.userRepository = userRepository;
     }
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        List<String> authHeaders = exchange.getRequest().getHeaders().getOrEmpty(HttpHeaders.AUTHORIZATION);
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
+        String header = request.getHeader("Authorization");
 
-        if (!authHeaders.isEmpty() && authHeaders.get(0).startsWith("Bearer ")) {
-            String token = authHeaders.get(0).substring(7); // 🔥 Supprime "Bearer "
+        if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
+            String token = header.substring(7);
             try {
-                Long userId = jwtUtil.extractUserId(token);
-                exchange.getAttributes().put("userId", userId); // 🔥 Injecte userId dans l'attribut de la requête
-            } catch (Exception e) {
-                System.err.println("❌ JWT invalide ou expiré : " + e.getMessage());
+                CurrentUser currentUser = jwtUtil.parseToken(token);
+                var user = userRepository.findById(currentUser.id()).orElseThrow();
+                if (user.getRole() != currentUser.role()) throw new IllegalArgumentException("Role changed");
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                        currentUser,
+                        null,
+                        List.of(new SimpleGrantedAuthority("ROLE_" + currentUser.role().name()))
+                );
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            } catch (Exception ignored) {
+                SecurityContextHolder.clearContext();
             }
         }
 
-        return chain.filter(exchange);
+        filterChain.doFilter(request, response);
     }
 }

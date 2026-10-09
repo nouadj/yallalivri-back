@@ -2,32 +2,22 @@ package dz.nadjtech.yallalivri.service;
 
 import dz.nadjtech.yallalivri.dto.OrderDTO;
 import dz.nadjtech.yallalivri.dto.OrderDisplayDTO;
-import dz.nadjtech.yallalivri.dto.OrderStatus;
-import dz.nadjtech.yallalivri.dto.UserRole;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import dz.nadjtech.yallalivri.enums.OrderStatus;
+import dz.nadjtech.yallalivri.security.CurrentUser;
 
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.List;
 
 public interface OrderService {
-    Flux<OrderDTO> getAllOrders();
-    Mono<OrderDTO> getOrderById(Long id);
-    Mono<OrderDTO> createOrder(OrderDTO orderDTO);
-    Mono<OrderDTO> updateOrder(Long id, OrderDTO orderDTO);
-    Mono<OrderDTO> updateOrderStatus(Long id, OrderStatus newOrderStatus);
-    Mono<Void> deleteOrder(Long id,
-                           UserRole role, Long userId);
-    Flux<OrderDisplayDTO> getAllOrderByCourierId(Long courierId);
-    Flux<OrderDisplayDTO> getAllOrderByStoreId(Long storeId);
-
-    Flux<OrderDisplayDTO> getOrdersByStatusSinceWithDistance(String status, LocalDateTime since, Integer distance, Long idCourier);
-
-    Mono<OrderDTO> assignOrderToCourier(Long id, Map<String, Object> updates);
-
-    Flux<OrderDisplayDTO> getOrdersByCourierAndStatus(Long courierId, OrderStatus orderStatus);
-
-    Flux<OrderDisplayDTO> getRecentOrdersByStoreId(Long storeId, LocalDateTime since);
-
-    Mono<OrderDTO> unassignOrderToCourier(Long id);
+    List<OrderDTO> getAllOrders(CurrentUser currentUser);
+    OrderDTO getOrderById(Long id, CurrentUser currentUser);
+    OrderDTO createOrder(OrderDTO orderDTO, CurrentUser currentUser);
+    OrderDTO updateOrder(Long id, OrderDTO orderDTO, CurrentUser currentUser);
+    OrderDTO updateOrderStatus(Long id, OrderStatus newOrderStatus, CurrentUser currentUser);
+    void deleteOrder(Long id, CurrentUser currentUser);
+    List<OrderDisplayDTO> getAllOrderByCourierId(Long courierId, String status, CurrentUser currentUser);
+    List<OrderDisplayDTO> getAllOrderByStoreId(Long storeId, Integer hours, CurrentUser currentUser);
+    List<OrderDisplayDTO> getOrdersByStatusSinceWithDistance(OrderStatus status, LocalDateTime since, Integer distance, Long courierId, CurrentUser currentUser);
+    OrderDTO assignOrderToCourier(Long id, Long courierId, CurrentUser currentUser);
+    OrderDTO unassignOrderToCourier(Long id, CurrentUser currentUser);
 }

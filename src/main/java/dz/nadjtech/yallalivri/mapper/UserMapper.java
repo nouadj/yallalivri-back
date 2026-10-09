@@ -9,75 +9,60 @@ import org.springframework.stereotype.Component;
 public class UserMapper {
 
     public UserDTO toDTO(User user) {
-        if (user == null) {
-            return null;
-        }
+        if (user == null) return null;
 
-        UserDTO dto = new UserDTO();
-        dto.setId(user.getId());
-        dto.setName(user.getName());
-        dto.setEmail(user.getEmail());
-        dto.setRole(user.getRole());
-        dto.setPhone(user.getPhone());
-        dto.setCreatedAt(user.getCreatedAt());
-        dto.setUpdatedAt(user.getUpdatedAt());
-        dto.setNotificationToken(user.getNotificationToken());
-        dto.setLatitude(user.getLatitude());
-        dto.setLongitude(user.getLongitude());
-        dto.setAddress(user.getAddress());
-        dto.setDateOfBirth(user.getDateOfBirth());
-        dto.setStoreType(user.getStoreType());
-
-        return dto;
+        return UserDTO.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .role(user.getRole())
+                .phone(user.getPhone())
+                .email(user.getEmail())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .address(user.getAddress())
+                .notificationToken(user.getNotificationToken())
+                .latitude(user.getLatitude())
+                .longitude(user.getLongitude())
+                .dateOfBirth(user.getDateOfBirth())
+                .storeType(user.getStoreType())
+                .build();
     }
-
 
     public UserDTOWithPassword toWithPasswordDTO(User user) {
-        if (user == null) {
-            return null;
-        }
+        if (user == null) return null;
 
-        UserDTOWithPassword dto = new UserDTOWithPassword();
-        dto.setId(user.getId());
-        dto.setName(user.getName());
-        dto.setEmail(user.getEmail());
-        dto.setRole(user.getRole());
-        dto.setPhone(user.getPhone());
-        dto.setCreatedAt(user.getCreatedAt());
-        dto.setUpdatedAt(user.getUpdatedAt());
-        dto.setNotificationToken(user.getNotificationToken());
-        dto.setLatitude(user.getLatitude());
-        dto.setLongitude(user.getLongitude());
-        dto.setAddress(user.getAddress());
-        dto.setDateOfBirth(user.getDateOfBirth());
-        dto.setStoreType(user.getStoreType());
-        dto.setPassword(user.getPassword());
-
-        return dto;
+        return UserDTOWithPassword.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .role(user.getRole())
+                .phone(user.getPhone())
+                .email(user.getEmail())
+                .password(user.getPassword())
+                .address(user.getAddress())
+                .notificationToken(user.getNotificationToken())
+                .latitude(user.getLatitude())
+                .longitude(user.getLongitude())
+                .dateOfBirth(user.getDateOfBirth())
+                .storeType(user.getStoreType())
+                .build();
     }
 
-    public User toEntity(UserDTO dto) {
-        if (dto == null) {
-            return null;
-        }
+    public User toEntity(UserDTOWithPassword dto) {
+        if (dto == null) return null;
 
-        User user = new User();
-        user.setId(dto.getId());
-        user.setName(dto.getName());
-        user.setEmail(dto.getEmail());
-        user.setRole(dto.getRole());
-        user.setPhone(dto.getPhone());
-        user.setCreatedAt(dto.getCreatedAt());
-        user.setUpdatedAt(dto.getUpdatedAt());
-        user.setNotificationToken(dto.getNotificationToken());
-        user.setLatitude(dto.getLatitude());
-        user.setLongitude(dto.getLongitude());
-        user.setAddress(dto.getAddress());
-        user.setDateOfBirth(dto.getDateOfBirth());
-        user.setStoreType(dto.getStoreType());
-
-        return user;
+        return User.builder()
+                .id(dto.getId())
+                .name(dto.getName())
+                .role(dto.getRole())
+                .phone(dto.getPhone())
+                .email(dto.getEmail())
+                .password(dto.getPassword())
+                .address(dto.getAddress())
+                .notificationToken(dto.getNotificationToken())
+                .latitude(dto.getLatitude())
+                .longitude(dto.getLongitude())
+                .dateOfBirth(dto.getDateOfBirth())
+                .storeType(dto.getStoreType())
+                .build();
     }
-
-
 }

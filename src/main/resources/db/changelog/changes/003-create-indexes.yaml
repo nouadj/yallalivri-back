@@ -1,0 +1,37 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-indexes
+      author: nadjtech
+      changes:
+        - createIndex:
+            tableName: users
+            indexName: idx_users_role
+            columns:
+              - column:
+                  name: role
+        - createIndex:
+            tableName: orders
+            indexName: idx_orders_store_id
+            columns:
+              - column:
+                  name: store_id
+        - createIndex:
+            tableName: orders
+            indexName: idx_orders_courier_id
+            columns:
+              - column:
+                  name: courier_id
+        - createIndex:
+            tableName: orders
+            indexName: idx_orders_status_created_at
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: created_at
+        - createIndex:
+            tableName: orders
+            indexName: idx_orders_updated_at
+            columns:
+              - column:
+                  name: updated_at

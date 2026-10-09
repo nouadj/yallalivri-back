@@ -1,15 +1,16 @@
 package dz.nadjtech.yallalivri.repository;
 
-import dz.nadjtech.yallalivri.dto.UserRole;
 import dz.nadjtech.yallalivri.entity.User;
-import org.springframework.data.repository.reactive.ReactiveCrudRepository;
-import org.springframework.stereotype.Repository;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import dz.nadjtech.yallalivri.enums.UserRole;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-@Repository
-public interface UserRepository extends ReactiveCrudRepository<User, Long> {
-    Mono<User> findByEmail(String email);
+import java.util.List;
+import java.util.Optional;
 
-    Flux<User> findAllByRole(UserRole userRole);
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
+    Optional<User> findByEmail(String email);
+    List<User> findAllByRole(UserRole role);
+    boolean existsByEmail(String email);
+    boolean existsByEmailAndIdNot(String email, Long id);
 }

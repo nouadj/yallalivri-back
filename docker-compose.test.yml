@@ -1,0 +1,27 @@
+services:
+  postgres-test:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: yalla_livri_test
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: test-only-password
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d yalla_livri_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  backend-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    command:
+      - "-Dspring.datasource.url=jdbc:postgresql://postgres-test:5432/yalla_livri_test"
+      - "-Dspring.datasource.username=postgres"
+      - "-Dspring.datasource.password=test-only-password"
+      - "-Dspring.liquibase.change-log=classpath:/db/changelog/db.changelog-master.yaml"
+      - test
+    depends_on:
+      postgres-test:
+        condition: service_healthy
